@@ -6,6 +6,9 @@ import Help from './components/Help'
 import Info from './components/Info'
 import Grades from './components/Grades'
 import Courses from './components/Courses'
+import Forms from './components/Forms'
+import Management from './components/Management'
+
 
 
 
@@ -19,6 +22,9 @@ export default function App() {
       <Route path="/info" element={<Info />} />
       <Route path="/courses" element={<Courses />} />
       <Route path="/grades" element={<Grades />} />
+      <Route path="/forms" element={<Forms />} />
+      <Route path="/management" element={<Management />} />
+    
       </Routes>
     </div>
   )
