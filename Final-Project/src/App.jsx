@@ -1,7 +1,10 @@
 import React from 'react'
+import Exercise from './Exercise'
 
 export default function App() {
   return (
-    <div>HEY hey</div>
+    <div>
+      <Exercise/>
+    </div>
   )
 }
