@@ -1,8 +1,13 @@
 import React from 'react'
-import Header from './Header'
+import Header from './components/Header'
 import { Routes, Route } from 'react-router-dom'
-import Home from './Home'
-import Help from './Help'
+import Home from './components/Home'
+import Help from './components/Help'
+import Info from './components/Info'
+import Grades from './components/Grades'
+import Courses from './components/Courses'
+
+
 
 export default function App() {
   return (
@@ -11,6 +16,9 @@ export default function App() {
       <Routes>
       <Route path='/' element={<Home />} />
       <Route path="/help" element={<Help />} />
+      <Route path="/info" element={<Info />} />
+      <Route path="/courses" element={<Courses />} />
+      <Route path="/grades" element={<Grades />} />
       </Routes>
     </div>
   )
