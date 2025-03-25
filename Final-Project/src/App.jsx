@@ -8,6 +8,7 @@ import Grades from './components/Grades'
 import Courses from './components/Courses'
 import CourseForm from './components/CourseForm'
 import CourseManagement from './components/CourseManagement'
+import Assignments from './components/Assignments'
 
 
 
@@ -24,6 +25,7 @@ export default function App() {
       <Route path="/grades" element={<Grades />} />
       <Route path="/courseform" element={<CourseForm />} />
       <Route path="/coursemanagement" element={<CourseManagement />} />
+      <Route path="/assignments" element={<Assignments />} />
     
       </Routes>
     </div>
