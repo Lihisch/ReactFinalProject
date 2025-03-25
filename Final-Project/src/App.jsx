@@ -6,7 +6,7 @@ import Help from './components/Help'
 import Info from './components/Info'
 import Grades from './components/Grades'
 import Courses from './components/Courses'
-import CourseForms from './components/CourseForms'
+import CourseForm from './components/CourseForm'
 import CourseManagement from './components/CourseManagement'
 
 
@@ -22,7 +22,7 @@ export default function App() {
       <Route path="/info" element={<Info />} />
       <Route path="/courses" element={<Courses />} />
       <Route path="/grades" element={<Grades />} />
-      <Route path="/courseforms" element={<CourseForms />} />
+      <Route path="/courseform" element={<CourseForm />} />
       <Route path="/coursemanagement" element={<CourseManagement />} />
     
       </Routes>
