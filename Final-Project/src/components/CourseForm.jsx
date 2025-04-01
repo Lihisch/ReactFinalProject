@@ -26,6 +26,30 @@ export default function CourseForm() {
   const handleSubmit = (event) => {
     event.preventDefault();
     console.log("Form submitted!", formData);
+
+    // Retrieve existing courses from local storage or initialize an empty array
+    const existingCourses = JSON.parse(localStorage.getItem("courses")) || [];
+
+    // Add the new course to the array
+    existingCourses.push(formData);
+
+    // Save the updated array back to local storage
+    localStorage.setItem("courses", JSON.stringify(existingCourses));
+
+    // Optionally, you can reset the form after submission
+    setFormData({
+      courseName: '',
+      courseId: '',
+      courseType: '',
+      creditPoints: '',
+      semester: '',
+      professorsName: '',
+      dayOfWeek: '',
+      courseHours: '',
+      description: '',
+      startingDate: '',
+      maxStudents: '',
+    });
   };
 
   const inputStyle = {
