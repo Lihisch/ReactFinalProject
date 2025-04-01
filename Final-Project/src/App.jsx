@@ -9,8 +9,7 @@ import Courses from './components/Courses'
 import CourseForm from './components/CourseForm'
 import CourseManagement from './components/CourseManagement'
 import Assignments from './components/Assignments'
-
-
+import CourseList from './components/CourseList'
 
 
 export default function App() {
@@ -26,7 +25,7 @@ export default function App() {
       <Route path="/courseform" element={<CourseForm />} />
       <Route path="/coursemanagement" element={<CourseManagement />} />
       <Route path="/assignments" element={<Assignments />} />
-    
+      <Route path="/courselist" element={<CourseList />} />
       </Routes>
     </div>
   )
