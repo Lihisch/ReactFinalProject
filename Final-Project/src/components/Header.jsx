@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useState } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -22,26 +23,41 @@ const pages = [
   { name: 'Info', link: '/info' },
 ];
 
+const managementPage = {
+  name: 'Management Screens',
+  subPages: [
+    { name: 'Course Management', link: '/Coursemanagement' },
+    { name: 'Grade Management', link: '/GradesManagement' },
+    { name: 'Assignment Management', link: '/AssignmentsManagement' },
+  ],
+};
+
+const managementForms = {
+  name: 'Management Forms',
+  subPages: [
+    { name: 'Course Form', link: '/CourseForm' },
+    { name: 'Grade Form', link: '/GradesForm' },
+    { name: 'Assignment Form', link: '/AssignmentsForm' },
+  ],
+};
+
 const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
 
 function ResponsiveAppBar() {
   const [anchorElNav, setAnchorElNav] = React.useState(null);
+  const [anchorElSubNav, setAnchorElSubNav] = useState(null);
+  const [anchorElForms, setAnchorElForms] = useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
 
-  const handleOpenNavMenu = (event) => {
-    setAnchorElNav(event.currentTarget);
-  };
-  const handleOpenUserMenu = (event) => {
-    setAnchorElUser(event.currentTarget);
-  };
+  const handleOpenNavMenu = (event) => setAnchorElNav(event.currentTarget);
+  const handleOpenUserMenu = (event) => setAnchorElUser(event.currentTarget);
+  const handleOpenSubNavMenu = (event) => setAnchorElSubNav(event.currentTarget);
+  const handleOpenFormsMenu = (event) => setAnchorElForms(event.currentTarget);
 
-  const handleCloseNavMenu = () => {
-    setAnchorElNav(null);
-  };
-
-  const handleCloseUserMenu = () => {
-    setAnchorElUser(null);
-  };
+  const handleCloseNavMenu = () => setAnchorElNav(null);
+  const handleCloseSubNavMenu = () => setAnchorElSubNav(null);
+  const handleCloseFormsMenu = () => setAnchorElForms(null);
+  const handleCloseUserMenu = () => setAnchorElUser(null);
 
   return (
     <AppBar position="static">
@@ -66,10 +82,11 @@ function ResponsiveAppBar() {
             LOGO
           </Typography>
 
+          {/* Mobile Menu */}
           <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
             <IconButton
               size="large"
-              aria-label="account of current user"
+              aria-label="open navigation menu"
               aria-controls="menu-appbar"
               aria-haspopup="true"
               onClick={handleOpenNavMenu}
@@ -80,34 +97,78 @@ function ResponsiveAppBar() {
             <Menu
               id="menu-appbar"
               anchorEl={anchorElNav}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'left',
-              }}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
               keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'left',
-              }}
+              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
               open={Boolean(anchorElNav)}
               onClose={handleCloseNavMenu}
               sx={{ display: { xs: 'block', md: 'none' } }}
             >
               {pages.map((page) => (
                 <MenuItem key={page.name} onClick={handleCloseNavMenu}>
-                  <Typography sx={{ textAlign: 'center' }}>
-                    <a
-                      href={page.link}
-                      style={{ textDecoration: 'none', color: 'inherit' }}
-                    >
-                      {page.name}
-                    </a>
-                  </Typography>
+                  <a href={page.link} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <Typography sx={{ textAlign: 'center' }}>{page.name}</Typography>
+                  </a>
                 </MenuItem>
               ))}
+
+              {/* Management Screens */}
+              <div key={managementPage.name}>
+                <MenuItem onClick={handleOpenSubNavMenu}>
+                  <Typography sx={{ textAlign: 'center' }}>
+                    {managementPage.name}
+                  </Typography>
+                </MenuItem>
+                <Menu
+                  anchorEl={anchorElSubNav}
+                  open={Boolean(anchorElSubNav)}
+                  onClose={handleCloseSubNavMenu}
+                >
+                  {managementPage.subPages.map((subPage) => (
+                    <MenuItem key={subPage.name} onClick={handleCloseSubNavMenu}>
+                      <Typography sx={{ textAlign: 'center' }}>
+                        <a
+                          href={subPage.link}
+                          style={{ textDecoration: 'none', color: 'inherit' }}
+                        >
+                          {subPage.name}
+                        </a>
+                      </Typography>
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </div>
+
+              {/* Management Forms */}
+              <div key={managementForms.name}>
+                <MenuItem onClick={handleOpenFormsMenu}>
+                  <Typography sx={{ textAlign: 'center' }}>
+                    {managementForms.name}
+                  </Typography>
+                </MenuItem>
+                <Menu
+                  anchorEl={anchorElForms}
+                  open={Boolean(anchorElForms)}
+                  onClose={handleCloseFormsMenu}
+                >
+                  {managementForms.subPages.map((subPage) => (
+                    <MenuItem key={subPage.name} onClick={handleCloseFormsMenu}>
+                      <Typography sx={{ textAlign: 'center' }}>
+                        <a
+                          href={subPage.link}
+                          style={{ textDecoration: 'none', color: 'inherit' }}
+                        >
+                          {subPage.name}
+                        </a>
+                      </Typography>
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </div>
             </Menu>
           </Box>
 
+          {/* Desktop Title */}
           <AdbIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} />
           <Typography
             variant="h5"
@@ -128,6 +189,7 @@ function ResponsiveAppBar() {
             LOGO
           </Typography>
 
+          {/* Desktop Menu */}
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
             {pages.map((page) => (
               <Button
@@ -139,8 +201,41 @@ function ResponsiveAppBar() {
                 {page.name}
               </Button>
             ))}
+
+            {/* Management Screens */}
+            <Button onClick={handleOpenSubNavMenu} sx={{ my: 2, color: 'white', display: 'block' }}>
+              {managementPage.name}
+            </Button>
+            <Menu anchorEl={anchorElSubNav} open={Boolean(anchorElSubNav)} onClose={handleCloseSubNavMenu}>
+              {managementPage.subPages.map((subPage) => (
+                <MenuItem key={subPage.name} onClick={handleCloseSubNavMenu}>
+                  <Typography sx={{ textAlign: 'center' }}>
+                    <a href={subPage.link} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      {subPage.name}
+                    </a>
+                  </Typography>
+                </MenuItem>
+              ))}
+            </Menu>
+
+            {/* Management Forms */}
+            <Button onClick={handleOpenFormsMenu} sx={{ my: 2, color: 'white', display: 'block' }}>
+              {managementForms.name}
+            </Button>
+            <Menu anchorEl={anchorElForms} open={Boolean(anchorElForms)} onClose={handleCloseFormsMenu}>
+              {managementForms.subPages.map((subPage) => (
+                <MenuItem key={subPage.name} onClick={handleCloseFormsMenu}>
+                  <Typography sx={{ textAlign: 'center' }}>
+                    <a href={subPage.link} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      {subPage.name}
+                    </a>
+                  </Typography>
+                </MenuItem>
+              ))}
+            </Menu>
           </Box>
 
+          {/* User Avatar */}
           <Box sx={{ flexGrow: 0 }}>
             <Tooltip title="Open settings">
               <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
@@ -151,15 +246,9 @@ function ResponsiveAppBar() {
               sx={{ mt: '45px' }}
               id="menu-appbar"
               anchorEl={anchorElUser}
-              anchorOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
+              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
               keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
               open={Boolean(anchorElUser)}
               onClose={handleCloseUserMenu}
             >
@@ -175,4 +264,5 @@ function ResponsiveAppBar() {
     </AppBar>
   );
 }
+
 export default ResponsiveAppBar;
