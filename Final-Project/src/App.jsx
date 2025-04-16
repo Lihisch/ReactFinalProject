@@ -10,7 +10,10 @@ import CourseForm from './components/CourseForm'
 import CourseManagement from './components/CourseManagement'
 import Assignments from './components/Assignments'
 import CourseList from './components/CourseList'
-
+import GradesManagement from './components/GradesManagement'
+import AssignmentsManagement from './components/AssignmentsManagement'
+import GradesForm from './components/GradesForm'
+import AssignmentsForm from './components/AssignmentsForm'
 
 export default function App() {
   return (
@@ -26,6 +29,10 @@ export default function App() {
       <Route path="/coursemanagement" element={<CourseManagement />} />
       <Route path="/assignments" element={<Assignments />} />
       <Route path="/courselist" element={<CourseList />} />
+      <Route path="/GradesManagement" element={<GradesManagement />} />
+      <Route path="/AssignmentsManagement" element={<AssignmentsManagement/>} />
+      <Route path="/GradesForm" element={<GradesForm/>} />
+      <Route path="/AssignmentsForm" element={<AssignmentsForm/>} />
       </Routes>
 
     </div>
