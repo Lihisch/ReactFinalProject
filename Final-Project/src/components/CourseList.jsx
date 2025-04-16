@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -16,8 +16,7 @@ export default function CourseList() {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
 
-  useEffect(() => {
-    // Load courses from local storage on component mount
+  const loadCoursesFromLocalStorage = useCallback(() => {
     const storedCourses = localStorage.getItem('courses');
     if (storedCourses) {
       setCourses(JSON.parse(storedCourses));
@@ -25,9 +24,19 @@ export default function CourseList() {
   }, []);
 
   useEffect(() => {
+    // Load courses from local storage on component mount
+    loadCoursesFromLocalStorage();
+  }, [loadCoursesFromLocalStorage]);
+
+  useEffect(() => {
     // Save courses to local storage whenever the courses state changes
     localStorage.setItem('courses', JSON.stringify(courses));
   }, [courses]);
+
+  useEffect(() => {
+    // Load courses from local storage on component mount
+    loadCoursesFromLocalStorage();
+  }, [loadCoursesFromLocalStorage]);
 
   const handleNewCourseClick = () => {
     navigate('/courseform');
@@ -36,10 +45,10 @@ export default function CourseList() {
   const addCourse = (newCourse) => {
     setCourses([...courses, newCourse]);
   };
-
+  
   // Example data for 8 courses (replace with actual data from CourseForm)
   // This will be removed once we have the actual data from the form
-  useEffect(() => {
+  const initializeCourses = useCallback(() => {
     if (courses.length === 0) {
       const initialCourses = [
         {
@@ -149,7 +158,12 @@ export default function CourseList() {
       ];
       setCourses(initialCourses);
     }
-  }, [courses]);
+  }, [courses.length]);
+
+  useEffect(() => {
+    initializeCourses();
+  }, [initializeCourses]);
+
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>

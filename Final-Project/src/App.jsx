@@ -27,6 +27,7 @@ export default function App() {
       <Route path="/assignments" element={<Assignments />} />
       <Route path="/courselist" element={<CourseList />} />
       </Routes>
+
     </div>
   )
 }
