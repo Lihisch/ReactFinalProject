@@ -1,290 +1,274 @@
 import React, { useState } from 'react';
+// Import Link from react-router-dom for navigation
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import {
+  Container,
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Grid,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Snackbar,
+  Alert,
+  Breadcrumbs, // Import Breadcrumbs
+  Link,        // Import MUI Link (used to style RouterLink)
+} from '@mui/material';
+// Optional: Import an icon for Home
+import HomeIcon from '@mui/icons-material/Home';
+
+const colors = {
+  green: '#bed630',
+  greenDark: '#a7bc2a',
+  text: '#000000',
+  white: '#ffffff'
+};
 
 export default function CourseForm() {
-  const [formData, setFormData] = useState({
-    courseName: '',
+  const navigate = useNavigate();
+  const initialFormData = {
     courseId: '',
-    courseType: '',
+    courseName: '',
     creditPoints: '',
     semester: '',
     professorsName: '',
     dayOfWeek: '',
-    courseHours: '',
+    startTime: '',
+    endTime: '',
     description: '',
     startingDate: '',
-    maxStudents: '',
-  });
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    console.log("Form submitted!", formData);
+  const [formData, setFormData] = useState(initialFormData);
+  const [errors, setErrors] = useState({});
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-    // Retrieve existing courses from local storage or initialize an empty array
-    const existingCourses = JSON.parse(localStorage.getItem("courses")) || [];
+  const validate = () => {
+    const temp = {};
+    if (!formData.courseName) temp.courseName = 'Course Name is required.';
+    if (!formData.courseId) temp.courseId = 'Course ID is required.';
+    if (!formData.creditPoints || isNaN(formData.creditPoints) || formData.creditPoints <= 0) {
+      temp.creditPoints = 'Credit Points must be a positive number.';
+    }
+    if (!formData.semester) temp.semester = 'Semester is required.';
+    if (!formData.professorsName) temp.professorsName = "Professor's Name is required.";
+    if (!formData.dayOfWeek) temp.dayOfWeek = 'Day of Week is required.';
+    if (!formData.startTime) temp.startTime = 'Start Time is required.';
+    if (!formData.endTime || formData.endTime <= formData.startTime) {
+      temp.endTime = 'End Time must be after Start Time.';
+    }
+    if (!formData.description) temp.description = 'Description is required.';
+    if (!formData.startingDate) temp.startingDate = 'Starting Date is required.';
 
-    // Add the new course to the array
-    existingCourses.push(formData);
-
-    // Save the updated array back to local storage
-    localStorage.setItem("courses", JSON.stringify(existingCourses));
-
-    // Optionally, you can reset the form after submission
-    setFormData({
-      courseName: '',
-      courseId: '',
-      courseType: '',
-      creditPoints: '',
-      semester: '',
-      professorsName: '',
-      dayOfWeek: '',
-      courseHours: '',
-      description: '',
-      startingDate: '',
-      maxStudents: '',
-    });
+    setErrors(temp);
+    return Object.keys(temp).length === 0;
   };
 
-  const inputStyle = {
-    width: '100%',
-    padding: '10px',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    boxSizing: 'border-box', // Ensure padding and border are included in the width
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
-  const selectStyle = {
-    width: '100%',
-    padding: '10px',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    boxSizing: 'border-box',
-    appearance: 'none', // Remove default arrow in some browsers
-    WebkitAppearance: 'none',
-    MozAppearance: 'none',
-    backgroundImage: 'url("data:image/svg+xml;utf8,<svg fill=\'black\' height=\'24\' viewBox=\'0 0 24 24\' width=\'24\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>")',
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 10px center',
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!validate()) {
+      setSnackbar({ open: true, message: 'Please fix the errors in the form.', severity: 'error' });
+      return;
+    }
+
+    try {
+      const courses = JSON.parse(localStorage.getItem('courses')) || [];
+      const exists = courses.some((c) => c.courseId === formData.courseId);
+      if (exists) {
+        setSnackbar({ open: true, message: `Error: Course ID ${formData.courseId} already exists!`, severity: 'error' });
+        return;
+      }
+
+      const newCourse = {
+        ...formData,
+        courseHours: `${formData.startTime} - ${formData.endTime}`,
+        courseType: 'N/A', // Default value
+        maxStudents: 'N/A', // Default value
+      };
+
+      courses.push(newCourse);
+      localStorage.setItem('courses', JSON.stringify(courses));
+
+      setSnackbar({ open: true, message: 'Course added successfully!', severity: 'success' });
+      setTimeout(() => {
+        setFormData(initialFormData);
+        navigate('/courses'); // Navigate to the course list after success
+      }, 1500);
+    } catch (err) {
+      console.error("Error saving course:", err); // Log the specific error
+      setSnackbar({ open: true, message: 'Error saving course. Please check console for details.', severity: 'error' });
+    }
   };
 
-  const labelStyle = {
-    display: 'block',
-    marginBottom: '8px',
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
+
 
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '100vh',
-      backgroundColor: '#f0f0f0',
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '30px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-        width: '800px',
-        maxWidth: '95%',
-      }}>
-        <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>Course Form</h1>
-        <form onSubmit={handleSubmit}>
-          {/* Course Name (Full Row) */}
-          <div style={{ marginBottom: '20px' }}>
-            <label htmlFor="courseName" style={labelStyle}>Course Name:</label>
-            <input
-              type="text"
-              id="courseName"
-              name="courseName"
-              value={formData.courseName}
-              onChange={handleChange}
-              style={inputStyle}
-              required
-            />
-          </div>
+    <Container maxWidth="md" sx={{ py: 4 }}>
 
-          {/* Course ID & Course Type (Row 1) */}
-          <div style={{ display: 'flex', gap: '30px', marginBottom: '20px' }}>
-            <div style={{ flex: 1 }}>
-              <label htmlFor="courseId" style={labelStyle}>Course ID:</label>
-              <input
-                type="text"
-                id="courseId"
-                name="courseId"
-                value={formData.courseId}
-                onChange={handleChange}
-                style={inputStyle}
-                required
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label htmlFor="courseType" style={labelStyle}>Course Type:</label>
-              <select
-                id="courseType"
-                name="courseType"
-                value={formData.courseType}
-                onChange={handleChange}
-                style={selectStyle}
-                required
-              >
-                <option value="">Select Type</option>
-                <option value="Lecture">Lecture</option>
-                <option value="Lab">Lab</option>
-                <option value="Seminar">Seminar</option>
-              </select>
-            </div>
-          </div>
+      {/* --- BREADCRUMBS START --- */}
+      <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}> {/* Added margin-bottom */}
+        {/* 1. Home Link */}
+        <Link
+          component={RouterLink} // Use react-router-dom Link
+          underline="hover"
+          sx={{ display: 'flex', alignItems: 'center' }}
+          color="inherit"
+          to="/" // Link to Home page
+        >
+          <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+          Home
+        </Link>
 
-          {/* Credit Points & Semester (Row 2) */}
-          <div style={{ display: 'flex', gap: '30px', marginBottom: '20px' }}>
-            <div style={{ flex: 1 }}>
-              <label htmlFor="creditPoints" style={labelStyle}>Credit Points:</label>
-              <input
-                type="number"
-                id="creditPoints"
-                name="creditPoints"
-                value={formData.creditPoints}
-                onChange={handleChange}
-                style={inputStyle}
-                required
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label htmlFor="semester" style={labelStyle}>Semester:</label>
-              <select
-                id="semester"
-                name="semester"
-                value={formData.semester}
-                onChange={handleChange}
-                style={selectStyle}
-                required
-              >
-                <option value="">Select Semester</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="Summer">Summer</option>
-              </select>
-            </div>
-          </div>
+        {/* 2. Link to the relevant Management Screen */}
+        <Link
+          component={RouterLink} // Use react-router-dom Link
+          underline="hover"
+          color="inherit"
+          to="/Coursemanagement" // Link to the Manage Courses page
+        >
+          Manage Courses {/* Text reflects the destination */}
+        </Link>
 
-          {/* Professor's Name & Day of Week (Row 3) */}
-          <div style={{ display: 'flex', gap: '30px', marginBottom: '20px' }}>
-            <div style={{ flex: 1 }}>
-              <label htmlFor="professorsName" style={labelStyle}>Professor's Name:</label>
-              <select
-                id="professorsName"
-                name="professorsName"
-                value={formData.professorsName}
-                onChange={handleChange}
-                style={selectStyle}
-                required
-              >
-                <option value="">Select Professor</option>
-                <option value="Dr. Smith">Dr. Smith</option>
-                <option value="Prof. Johnson">Prof. Johnson</option>
-                <option value="Dr. Lee">Dr. Lee</option>
-              </select>
-            </div>
-            <div style={{ flex: 1 }}>
-              <label htmlFor="dayOfWeek" style={labelStyle}>Day of Week:</label>
-              <select
-                id="dayOfWeek"
-                name="dayOfWeek"
-                value={formData.dayOfWeek}
-                onChange={handleChange}
-                style={selectStyle}
-                required
-              >
-                <option value="">Select Day</option>
-                <option value="Sunday">Sunday</option>
-                <option value="Monday">Monday</option>
-                <option value="Tuesday">Tuesday</option>
-                <option value="Wednesday">Wednesday</option>
-                <option value="Thursday">Thursday</option>
-              </select>
-            </div>
-          </div>
+        {/* 3. Current Page (not a link) */}
+        <Typography color="text.primary">Add New Course</Typography>
+      </Breadcrumbs>
+      {/* --- BREADCRUMBS END --- */}
 
-          {/* Course Hours & Max Students (Row 4) */}
-          <div style={{ display: 'flex', gap: '30px', marginBottom: '20px' }}>
-            <div style={{ flex: 1 }}>
-              <label htmlFor="courseHours" style={labelStyle}>Course Hours:</label>
-              <input
-                type="time"
-                id="courseHours"
-                name="courseHours"
-                value={formData.courseHours}
-                onChange={handleChange}
-                style={inputStyle}
-                required
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label htmlFor="maxStudents" style={labelStyle}>Max Students:</label>
-              <input
-                type="number"
-                id="maxStudents"
-                name="maxStudents"
-                value={formData.maxStudents}
-                onChange={handleChange}
-                style={inputStyle}
-                required
-              />
-            </div>
-          </div>
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{
+          backgroundColor: colors.white,
+          p: 4,
+          borderRadius: 2,
+          boxShadow: 3,
+        }}
+      >
+        <Typography variant="h5" align="center" fontWeight="600" gutterBottom>
+          Create New Course
+        </Typography>
 
-          {/* Description (Full Row) */}
-          <div style={{ marginBottom: '25px' }}>
-            <label htmlFor="description" style={labelStyle}>Description:</label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              style={{ ...inputStyle, height: '120px', resize: 'vertical' }}
-              required
-            />
-          </div>
+        <Grid container spacing={2}>
+          {/* Course Name */}
+          <Grid item xs={12}>
+            <TextField fullWidth label="Course Name" name="courseName" value={formData.courseName} onChange={handleChange} error={!!errors.courseName} helperText={errors.courseName} required />
+          </Grid>
 
-          {/* Starting Date (Full Row) */}
-          <div style={{ marginBottom: '30px' }}>
-            <label htmlFor="startingDate" style={labelStyle}>Starting Date:</label>
-            <input
-              type="date"
-              id="startingDate"
-              name="startingDate"
-              value={formData.startingDate}
-              onChange={handleChange}
-              style={inputStyle}
-              required
-            />
-          </div>
+          {/* Course ID */}
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth label="Course ID" name="courseId" value={formData.courseId} onChange={handleChange} error={!!errors.courseId} helperText={errors.courseId} required />
+          </Grid>
+          {/* Credit Points */}
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth label="Credit Points" name="creditPoints" type="number" inputProps={{ min: 1 }} value={formData.creditPoints} onChange={handleChange} error={!!errors.creditPoints} helperText={errors.creditPoints} required />
+          </Grid>
+
+          {/* Semester */}
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth error={!!errors.semester} required>
+              <InputLabel>Semester</InputLabel>
+              <Select name="semester" value={formData.semester} onChange={handleChange} label="Semester">
+                <MenuItem value="A">A</MenuItem>
+                <MenuItem value="B">B</MenuItem>
+                <MenuItem value="Summer">Summer</MenuItem>
+              </Select>
+              {errors.semester && <Typography color="error" variant="caption">{errors.semester}</Typography>}
+            </FormControl>
+          </Grid>
+
+          {/* Professor's Name */}
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth label="Professor's Name" name="professorsName" value={formData.professorsName} onChange={handleChange} error={!!errors.professorsName} helperText={errors.professorsName} required />
+          </Grid>
+
+          {/* Day of Week */}
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth error={!!errors.dayOfWeek} required>
+              <InputLabel>Day of Week</InputLabel>
+              <Select name="dayOfWeek" value={formData.dayOfWeek} onChange={handleChange} label="Day of Week">
+                <MenuItem value="Sunday">Sunday</MenuItem>
+                <MenuItem value="Monday">Monday</MenuItem>
+                <MenuItem value="Tuesday">Tuesday</MenuItem>
+                <MenuItem value="Wednesday">Wednesday</MenuItem>
+                <MenuItem value="Thursday">Thursday</MenuItem>
+                <MenuItem value="Friday">Friday</MenuItem>
+              </Select>
+              {errors.dayOfWeek && <Typography color="error" variant="caption">{errors.dayOfWeek}</Typography>}
+            </FormControl>
+          </Grid>
+
+          {/* Starting Date */}
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth label="Starting Date" name="startingDate" type="date" value={formData.startingDate} onChange={handleChange} InputLabelProps={{ shrink: true }} error={!!errors.startingDate} helperText={errors.startingDate} required />
+          </Grid>
+
+          {/* Start Time */}
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth label="Start Time" name="startTime" type="time" value={formData.startTime} onChange={handleChange} InputLabelProps={{ shrink: true }} error={!!errors.startTime} helperText={errors.startTime} required />
+          </Grid>
+          {/* End Time */}
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth label="End Time" name="endTime" type="time" value={formData.endTime} onChange={handleChange} InputLabelProps={{ shrink: true }} error={!!errors.endTime} helperText={errors.endTime} required />
+          </Grid>
+
+          {/* Course Description */}
+          <Grid item xs={12}>
+            <TextField fullWidth label="Course Description" name="description" multiline rows={3} value={formData.description} onChange={handleChange} error={!!errors.description} helperText={errors.description} required />
+          </Grid>
 
           {/* Submit Button */}
-          <button
-            type="submit"
-            style={{
-              backgroundColor: '#007bff',
-              color: 'white',
-              padding: '12px 20px',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              width: '100%',
-            }}
-          >
-            Create Course
-          </button>
-        </form>
-      </div>
-    </div>
+          <Grid item xs={12} textAlign="center">
+            <Button
+              variant="contained"
+              type="submit"
+              size="large"
+              sx={{
+                backgroundColor: colors.green,
+                color: colors.text,
+                fontWeight: 500,
+                px: 5,
+                borderRadius: '6px',
+                textTransform: 'none',
+                boxShadow: 'none',
+                '&:hover': {
+                  backgroundColor: colors.greenDark,
+                  boxShadow: 'none'
+                },
+              }}
+            >
+              Add Course
+            </Button>
+          </Grid>
+        </Grid>
+      </Box>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar} // Use defined handler
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        {/* Ensure Alert is correctly imported if used standalone */}
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
   );
 }
