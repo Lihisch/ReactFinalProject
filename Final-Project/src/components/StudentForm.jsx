@@ -135,8 +135,8 @@ export default function StudentForm() {
         <Link component={RouterLink} underline="hover" sx={{ display: 'flex', alignItems: 'center' }} color="inherit" to="/">
           <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" /> Home
         </Link>
-        <Link component={RouterLink} underline="hover" color="inherit" to="/StudentList">
-          Manage Students
+        <Link component={RouterLink} underline="hover" color="inherit" to="/studentsmanagement">
+        Students Management
         </Link>
         <Typography color="text.primary">Add New Student</Typography>
       </Breadcrumbs>

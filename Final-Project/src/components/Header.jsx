@@ -29,7 +29,7 @@ const avatarFallbackBg = '#616161';
 const pages = [
   { name: 'Home', link: '/' },
   { name: 'Courses', link: '/courses' },
-  { name: 'Assignments', link: '/Assignments' },
+  { name: 'Assignments', link: '/assignments' }, 
   { name: 'Grades', link: '/grades' },
   { name: 'Help', link: '/help' },
   { name: 'Info', link: '/info' },
@@ -39,21 +39,21 @@ const managementMenu = {
   name: 'Management',
   items: [
     // Courses
-    { name: 'Manage Courses', link: '/Coursemanagement' },
-    { name: 'Add New Course', link: '/CourseForm' },
+    { name: 'Manage Courses', link: '/coursesmanagement' }, // Matches App.jsx
+    { name: 'Add New Course', link: '/courseform' },      // Matches App.jsx
     { isDivider: true },
     // Grades
-    { name: 'Manage Grades', link: '/GradesManagement' },
-    { name: 'Grade Assignment', link: '/GradesForm' }, // Updated name to match form purpose
+    { name: 'Manage Grades', link: '/gradesmanagement' }, // Matches App.jsx
+    { name: 'Grades Entry', link: '/gradesform' },     // Matches App.jsx
     { isDivider: true },
     // Assignments
-    { name: 'Manage Assignments', link: '/AssignmentsManagement' },
-    { name: 'Add New Assignment', link: '/AssignmentsForm' },
-    { isDivider: true }, // Added divider before new section
+    { name: 'Manage Assignments', link: '/assignmentsmanagement' }, // Matches App.jsx
+    { name: 'Add New Assignment', link: '/assignmentsform' },     // Matches App.jsx
+    { isDivider: true },
     // Students
-    { name: 'Manage Students', link: '/StudentsList' }, // Link to the student list page
-    { name: 'Add New Student', link: '/StudentForm' }, // Link to the student form page
-    { name: 'Enroll Student to Course', link: '/EnrollmentForm' }, // Link to the enrollment form page
+    { name: 'Manage Students', link: '/studentsmanagement' }, // Matches App.jsx
+    { name: 'Add New Student', link: '/studentform' },       // Matches App.jsx
+    { name: 'Enroll Student to Course', link: '/enrollmentform' }, // Matches App.jsx
   ],
 };
 
@@ -99,10 +99,7 @@ function ResponsiveAppBar() {
         <Toolbar disableGutters>
           <SchoolIcon sx={{ display: { xs: 'none', md: 'flex' }, mr: 1, color: textOnPrimary }} />
           <Typography
-            variant="h6"
-            noWrap
-            component="a"
-            onClick={() => handleNavigate('/')}
+            variant="h6" noWrap component="a" onClick={() => handleNavigate('/')}
             sx={{
               mr: 2, display: { xs: 'none', md: 'flex' }, fontFamily: 'monospace',
               fontWeight: 700, letterSpacing: '.1rem', color: textOnPrimary,
@@ -113,10 +110,7 @@ function ResponsiveAppBar() {
           </Typography>
 
           <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
-            <IconButton
-              size="large" aria-label="open navigation menu" aria-controls="menu-appbar-mobile"
-              aria-haspopup="true" onClick={handleOpenNavMenu} sx={{ color: textOnPrimary }}
-            >
+            <IconButton size="large" onClick={handleOpenNavMenu} sx={{ color: textOnPrimary }}>
               <MenuIcon />
             </IconButton>
             <Menu
@@ -132,15 +126,13 @@ function ResponsiveAppBar() {
                   <Typography textAlign="center">{page.name}</Typography>
                 </MenuItem>
               ))}
-              <MenuItem onClick={handleOpenMobileManagementMenu} aria-controls="submenu-management-mobile" aria-haspopup="true" sx={menuItemStyles}>
+              <MenuItem onClick={handleOpenMobileManagementMenu} sx={menuItemStyles}>
                 <Typography textAlign="center">{managementMenu.name}</Typography>
               </MenuItem>
             </Menu>
             <Menu
-              id="submenu-management-mobile"
-              anchorEl={anchorElMobileManagement}
-              open={Boolean(anchorElMobileManagement)}
-              onClose={handleCloseMobileManagementMenu}
+              id="submenu-management-mobile" anchorEl={anchorElMobileManagement}
+              open={Boolean(anchorElMobileManagement)} onClose={handleCloseMobileManagementMenu}
               anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
               transformOrigin={{ vertical: 'top', horizontal: 'left' }}
               PaperProps={{ sx: { backgroundColor: menuBg } }}
@@ -169,27 +161,21 @@ function ResponsiveAppBar() {
 
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
             {pages.map((page) => (
-              <Button
-                key={page.name} onClick={() => handleNavigate(page.link)}
+              <Button key={page.name} onClick={() => handleNavigate(page.link)}
                 sx={{ my: 2, color: textOnPrimary, display: 'block', '&:hover': { backgroundColor: hoverGreen } }}
               >
                 {page.name}
               </Button>
             ))}
             <Box>
-              <Button
-                onClick={handleOpenDesktopManagementMenu}
+              <Button onClick={handleOpenDesktopManagementMenu}
                 sx={{ my: 2, color: textOnPrimary, display: 'block', '&:hover': { backgroundColor: hoverGreen } }}
-                aria-controls="submenu-management-desktop"
-                aria-haspopup="true"
               >
                 {managementMenu.name}
               </Button>
               <Menu
-                id="submenu-management-desktop"
-                anchorEl={anchorElDesktopManagement}
-                open={Boolean(anchorElDesktopManagement)}
-                onClose={handleCloseDesktopManagementMenu}
+                id="submenu-management-desktop" anchorEl={anchorElDesktopManagement}
+                open={Boolean(anchorElDesktopManagement)} onClose={handleCloseDesktopManagementMenu}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
                 PaperProps={{ sx: { backgroundColor: menuBg } }}

@@ -1,53 +1,63 @@
+// src/App.jsx
 import React from 'react';
-import Header from './components/Header';
 import { Routes, Route } from 'react-router-dom';
+import Header from './components/Header';
 import Home from './components/Home';
 import Help from './components/Help';
 import Info from './components/Info';
 import Grades from './components/Grades';
 import Courses from './components/Courses';
-import CourseForm from './components/CourseForm';
-import CourseManagement from './components/CourseManagement';
 import Assignments from './components/Assignments';
-import CourseList from './components/CourseList'; 
-import GradesManagement from './components/GradesManagement';
-import AssignmentsManagement from './components/AssignmentsManagement';
-import GradesForm from './components/GradesForm';
-import AssignmentsForm from './components/AssignmentsForm';
+import CoursesManagement from './components/CoursesManagement';
+import CourseForm from './components/CourseForm';
+import StudentsManagement from './components/StudentsManagement';
 import StudentForm from './components/StudentForm';
-import StudentsList from './components/StudentsList';
 import EnrollmentForm from './components/EnrollmentForm';
+import GradesManagement from './components/GradesManagement';
+import GradesForm from './components/GradesForm';
+import AssignmentsManagement from './components/AssignmentsManagement';
+import AssignmentsForm from './components/AssignmentsForm';
 
 import './App.css';
 
-
-export default function App() {
+function App() {
   return (
     <div>
-      <Header/>
+      <Header />
       <Routes>
-        <Route path='/' element={<Home />} />
+        {/* General Routes */}
+        <Route path="/" element={<Home />} />
         <Route path="/help" element={<Help />} />
         <Route path="/info" element={<Info />} />
-        <Route path="/courses" element={<Courses />} />
         <Route path="/grades" element={<Grades />} />
-        <Route path="/courseform" element={<CourseForm />} />
-        <Route path="/coursemanagement" element={<CourseManagement />} />
+        <Route path="/courses" element={<Courses />} />
         <Route path="/assignments" element={<Assignments />} />
-        <Route path="/courselist" element={<CourseList />} />
-        <Route path="/GradesManagement" element={<GradesManagement />} />
-        <Route path="/AssignmentsManagement" element={<AssignmentsManagement/>} />
-        <Route path="/GradesForm" element={<GradesForm/>} />
-        <Route path="/assignmentsForm" element={<AssignmentsForm/>} />
-        <Route path="/studentForm" element={<StudentForm />} />
-        <Route path="/StudentsList" element={<StudentsList />} />
+
+        {/* Courses Management */}
+        <Route path="/coursesmanagement" element={<CoursesManagement />} />
+        <Route path="/courseform" element={<CourseForm />} /> {/* For adding a new course */}
+        <Route path="/courseform/:courseId" element={<CourseForm />} /> {/* For editing an existing course */}
+
+        {/* Students Management - UPDATED */}
+        <Route path="/studentsmanagement" element={<StudentsManagement />} />
+        <Route path="/studentform" element={<StudentForm />} /> {/* For adding a new student */}
+        <Route path="/studentform/:studentId" element={<StudentForm />} /> {/* For editing an existing student */}
+      
+
+        {/* Enrollment Management */}
         <Route path="/enrollmentform" element={<EnrollmentForm />} />
 
-      
-      
-       
+        {/* Grades Management */}
+        <Route path="/gradesmanagement" element={<GradesManagement />} />
+        <Route path="/gradesform" element={<GradesForm />} />
 
+        {/* Assignments Management */}
+        <Route path="/assignmentsmanagement" element={<AssignmentsManagement />} />
+        <Route path="/assignmentsform" element={<AssignmentsForm />} /> {/* For adding a new assignment */}
+        <Route path="/assignmentsform/:assignmentCode" element={<AssignmentsForm />} /> {/* For editing an existing assignment */}
       </Routes>
     </div>
-  )
+  );
 }
+
+export default App;

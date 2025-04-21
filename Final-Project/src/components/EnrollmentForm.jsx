@@ -1,370 +1,340 @@
 // src/components/EnrollmentForm.jsx
-
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
-  Container,
-  Box,
-  Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Button,
-  Grid,
-  Snackbar,
-  Alert,
-  Breadcrumbs,
-  Link,
-  FormHelperText,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
-  FormLabel
+  Container, Box, Typography, Button, Grid, Snackbar, Alert, Breadcrumbs, Link as MuiLink,
+  FormHelperText, FormGroup, FormControlLabel, Checkbox, FormLabel, FormControl,
+  List, ListItem, CircularProgress, Paper, alpha, Select, MenuItem, InputLabel // Added Select, MenuItem, InputLabel
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import SchoolIcon from '@mui/icons-material/School';
+import SaveIcon from '@mui/icons-material/Save';
 
-// Define constants for local storage keys
 const STUDENTS_STORAGE_KEY = 'students';
 const COURSES_STORAGE_KEY = 'courses';
 
 const colors = {
-  green: '#bed630',
-  greenDark: '#a7bc2a',
-  text: '#000000',
-  white: '#ffffff'
+  primaryGreenBase: '#bed630',
+  primaryGreen: '#7da321',
+  greenDark: '#5a7d00',
+  backgroundGrey: '#f5f5f5',
+  textDark: '#333333',
+  white: '#ffffff',
+  secondaryGrey: '#757575',
+  errorRed: '#d32f2f',
+  iconContrastLight: '#ffffff',
+  iconContrastDark: '#555555',
 };
 
+// Helper to check for valid ID
+const isValidId = (id) => id != null && id !== '';
+
 export default function EnrollmentForm() {
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [selectedCourseIds, setSelectedCourseIds] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [courses, setCourses] = useState([]);
-  const [errors, setErrors] = useState({});
+  const studentIdFromUrl = searchParams.get('studentId'); // ID from URL if present
+
+  const [allStudents, setAllStudents] = useState([]); // For general mode dropdown
+  const [allCourses, setAllCourses] = useState([]);
+  const [selectedStudentId, setSelectedStudentId] = useState(''); // Holds the ID of the student being managed (from URL or dropdown)
+  const [student, setStudent] = useState(null); // The actual student object being managed
+  const [selectedCourseIds, setSelectedCourseIds] = useState(new Set());
+  const [isLoading, setIsLoading] = useState(false); // Initially false, true only during data loading
+  const [error, setError] = useState(null);
+  const [formError, setFormError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  // Fetch data from localStorage on component mount
-  useEffect(() => {
-    console.log("EnrollmentForm: Fetching data..."); // Added log
+  const safeJsonParse = (key, defaultValue = []) => {
     try {
-      // Load Students
-      const studentsString = localStorage.getItem(STUDENTS_STORAGE_KEY);
-      const parsedStudents = studentsString ? JSON.parse(studentsString) : [];
-      // Ensure parsed data is an array before setting state
-      if (Array.isArray(parsedStudents)) {
-        setStudents(parsedStudents);
-        console.log("EnrollmentForm: Students loaded:", parsedStudents.length); // Log count
-      } else {
-        console.warn("EnrollmentForm: Parsed student data is not an array.", parsedStudents);
-        setStudents([]); // Default to empty array if not valid
+      const item = localStorage.getItem(key);
+      if (!item) return defaultValue;
+      const parsed = JSON.parse(item);
+      // Basic validation: ensure it's an array and filter invalid students if needed
+      if (Array.isArray(parsed)) {
+          if (key === STUDENTS_STORAGE_KEY) {
+              return parsed.filter(s => isValidId(s?.studentId)); // Ensure students have valid IDs
+          }
+          return parsed;
       }
-
-      // Load Courses
-      const coursesString = localStorage.getItem(COURSES_STORAGE_KEY);
-      const parsedCourses = coursesString ? JSON.parse(coursesString) : [];
-      // Ensure parsed data is an array before setting state
-      if (Array.isArray(parsedCourses)) {
-        setCourses(parsedCourses);
-        console.log("EnrollmentForm: Courses loaded:", parsedCourses.length); // Log count
-      } else {
-        console.warn("EnrollmentForm: Parsed course data is not an array.", parsedCourses);
-        setCourses([]); // Default to empty array if not valid
-      }
-
-    } catch (error) {
-      console.error("EnrollmentForm: Error fetching/parsing data from localStorage:", error);
-      setSnackbar({ open: true, message: 'Error loading initial data. Check console.', severity: 'error' });
-      // Ensure state is reset on error
-      setStudents([]);
-      setCourses([]);
-    }
-  }, []); // Empty dependency array ensures this runs only once on mount
-
-  // Validate form selections
-  const validate = () => {
-    const temp = {};
-    if (!selectedStudentId) {
-      temp.studentId = 'Please select a student.';
-    }
-    // Only require course selection if courses are available
-    if (Array.isArray(courses) && courses.length > 0 && selectedCourseIds.length === 0) {
-      temp.courseIds = 'Please select at least one course.';
-    }
-    setErrors(temp);
-    return Object.keys(temp).length === 0; // True if no errors
-  };
-
-  // Handle student selection change
-  const handleStudentChange = (event) => {
-    const studentId = event.target.value;
-    setSelectedStudentId(studentId);
-    // Clear student error when selection changes
-    if (errors.studentId) {
-      setErrors(prev => ({ ...prev, studentId: undefined }));
+      return defaultValue;
+    } catch (e) {
+      console.error(`Error parsing ${key} from localStorage`, e);
+      setError(`Failed to parse data for ${key}. Check console.`); // Set error state on parse failure
+      return defaultValue;
     }
   };
 
-  // Handle course checkbox change
-  const handleCourseCheckboxChange = (event) => {
-    const { value: courseId, checked } = event.target;
-    // Use functional update for state based on previous state
-    setSelectedCourseIds(prevSelected => {
-      let updatedSelected = [...prevSelected];
-      if (checked) {
-        // Add only if not already present
-        if (!updatedSelected.includes(courseId)) {
-          updatedSelected.push(courseId);
+  // Effect 1: Load initial data (all students and courses) and set initial selected student if ID comes from URL
+  useEffect(() => {
+    setIsLoading(true);
+    setError(null); // Reset error
+    try {
+        const students = safeJsonParse(STUDENTS_STORAGE_KEY);
+        const courses = safeJsonParse(COURSES_STORAGE_KEY);
+        setAllStudents(students);
+        setAllCourses(courses);
+
+        // If an ID came from the URL, set it as the selected student
+        if (isValidId(studentIdFromUrl)) {
+            console.log("EnrollmentForm: Initializing with studentId from URL:", studentIdFromUrl);
+            setSelectedStudentId(studentIdFromUrl);
+        } else {
+            console.log("EnrollmentForm: Initializing in general mode (no studentId from URL).");
+            setSelectedStudentId(''); // Ensure it's reset if URL ID is invalid/missing
+            setStudent(null); // Clear student object if no valid ID from URL
+            setSelectedCourseIds(new Set()); // Clear course selections
         }
-      } else {
-        // Remove the id
-        updatedSelected = updatedSelected.filter(id => id !== courseId);
-      }
-      return updatedSelected;
-    });
-    // Clear course error when selection changes
-    if (errors.courseIds) {
-      setErrors(prev => ({ ...prev, courseIds: undefined }));
+    } catch (err) {
+        console.error("EnrollmentForm Error: Failed during initial data load:", err);
+        setError('Failed to load initial student or course data.');
+    } finally {
+        setIsLoading(false);
     }
+  }, [studentIdFromUrl]); // Rerun if the ID from the URL changes
+
+  // Effect 2: Load specific student data and their courses *whenever* selectedStudentId changes (either from URL or dropdown)
+  useEffect(() => {
+    // Only run if a valid student ID is selected
+    if (isValidId(selectedStudentId)) {
+        setIsLoading(true); // Indicate loading specific student data
+        setError(null); // Reset previous errors
+        setStudent(null); // Reset student object before finding new one
+        setSelectedCourseIds(new Set()); // Reset course selections
+
+        console.log("EnrollmentForm: Loading data for selectedStudentId:", selectedStudentId);
+
+        const foundStudent = allStudents.find(s => String(s.studentId) === String(selectedStudentId));
+
+        if (foundStudent) {
+            setStudent(foundStudent);
+            // Initialize selected courses based on the found student's data
+            setSelectedCourseIds(new Set((foundStudent.enrolledCourses || []).map(String)));
+            console.log("EnrollmentForm: Student found and data set:", foundStudent);
+        } else {
+            // This case might happen if the ID from URL is invalid after initial load, or dropdown selection fails
+            console.error(`EnrollmentForm Error: Student with selected ID ${selectedStudentId} not found in loaded students.`);
+            setError(`Student with ID ${selectedStudentId} not found.`);
+            setSelectedStudentId(''); // Reset selection if student not found
+        }
+        setIsLoading(false); // Finish loading specific student data
+    } else {
+        // If no valid student is selected (e.g., in general mode before selection)
+        setStudent(null); // Ensure student object is null
+        setSelectedCourseIds(new Set()); // Ensure selections are cleared
+    }
+  }, [selectedStudentId, allStudents]); // Rerun when the selected ID or the list of all students changes
+
+  // Handler for the student selection dropdown (General Mode)
+  const handleStudentSelectChange = (event) => {
+    const newStudentId = event.target.value;
+    console.log("EnrollmentForm: Student selected from dropdown:", newStudentId);
+    setSelectedStudentId(newStudentId); // This will trigger Effect 2
   };
 
-  // Handle form submission
+  const handleCourseCheckboxChange = (event) => {
+    const courseId = event.target.value;
+    const isChecked = event.target.checked;
+    setSelectedCourseIds(prev => {
+      const updated = new Set(prev);
+      isChecked ? updated.add(courseId) : updated.delete(courseId);
+      return updated;
+    });
+    if (formError) setFormError(null);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!validate()) {
-      setSnackbar({ open: true, message: 'Please make valid selections.', severity: 'warning' });
+    // Check if a student is actually selected and loaded
+    if (!student || !isValidId(selectedStudentId)) {
+      setSnackbar({ open: true, message: 'Please select a student first.', severity: 'warning' });
       return;
     }
 
     try {
-      // Fetch fresh student data on submit to avoid stale data issues
-      const allStudents = JSON.parse(localStorage.getItem(STUDENTS_STORAGE_KEY)) || [];
-      const studentIndex = allStudents.findIndex(s => s?.studentId === selectedStudentId); // Use optional chaining
+      // Use the currently selected student ID for saving
+      const currentStudentId = selectedStudentId;
+      const allStudentsData = safeJsonParse(STUDENTS_STORAGE_KEY); // Re-read fresh data for saving
+      const studentIndex = allStudentsData.findIndex(s => String(s?.studentId) === String(currentStudentId));
 
       if (studentIndex === -1) {
-        setSnackbar({ open: true, message: 'Selected student not found. Please refresh.', severity: 'error' });
+        setSnackbar({ open: true, message: 'Error finding student to update. Please refresh.', severity: 'error' });
         return;
       }
 
-      // Create a mutable copy of the student object
-      const studentToUpdate = { ...allStudents[studentIndex] };
+      const currentEnrolledSet = new Set(allStudentsData[studentIndex]?.enrolledCourses?.map(String) || []);
+      const newSelectedArray = Array.from(selectedCourseIds);
 
-      // Ensure enrolledCourses is an array, initialize if not
-      const currentEnrolled = Array.isArray(studentToUpdate.enrolledCourses) ? studentToUpdate.enrolledCourses : [];
-      let updatedEnrolledCourses = [...currentEnrolled]; // Work with a copy
+      const hasChanged = newSelectedArray.length !== currentEnrolledSet.size ||
+                         newSelectedArray.some(id => !currentEnrolledSet.has(id));
 
-      let coursesAddedCount = 0;
-      let alreadyEnrolledCount = 0;
+      if (!hasChanged) {
+          setSnackbar({ open: true, message: 'No changes detected in enrollment.', severity: 'info' });
+          return;
+      }
 
-      // Process selected courses
-      selectedCourseIds.forEach(courseId => {
-        if (!updatedEnrolledCourses.includes(courseId)) {
-          updatedEnrolledCourses.push(courseId);
-          coursesAddedCount++;
-        } else {
-          alreadyEnrolledCount++;
-        }
+      const updatedStudents = allStudentsData.map((s, index) => {
+          if (index === studentIndex) {
+              return { ...s, enrolledCourses: newSelectedArray };
+          }
+          return s;
       });
 
-      // Update localStorage only if changes were made
-      if (coursesAddedCount > 0) {
-        studentToUpdate.enrolledCourses = updatedEnrolledCourses; // Assign the updated array
-        allStudents[studentIndex] = studentToUpdate;
-        localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(allStudents));
-        console.log("EnrollmentForm: Student enrollment updated in localStorage.", studentToUpdate);
-      }
-
-      // Determine feedback message
-      let feedbackMessage = '';
-      let feedbackSeverity = 'success';
-      if (coursesAddedCount > 0 && alreadyEnrolledCount > 0) {
-        feedbackMessage = `Enrolled in ${coursesAddedCount} new course(s). ${alreadyEnrolledCount} already enrolled.`;
-        feedbackSeverity = 'info';
-      } else if (coursesAddedCount > 0) {
-        feedbackMessage = `Successfully enrolled in ${coursesAddedCount} course(s).`;
-      } else if (alreadyEnrolledCount > 0) {
-        feedbackMessage = `Student already enrolled in the selected course(s).`;
-        feedbackSeverity = 'info';
-      } else {
-        // This case should ideally not happen if validation works, but good fallback
-        feedbackMessage = 'No new enrollments were made.';
-        feedbackSeverity = 'warning';
-      }
-
-      setSnackbar({ open: true, message: feedbackMessage, severity: feedbackSeverity });
-
-      // Reset form state after successful submission (or attempt)
-      setTimeout(() => {
-        setSelectedStudentId('');
-        setSelectedCourseIds([]);
-        setErrors({}); // Explicitly clear errors
-      }, 1500); // Reduced delay slightly
+      localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updatedStudents));
+      setSnackbar({ open: true, message: 'Enrollments updated successfully!', severity: 'success' });
+      // Update local state to reflect save
+      setStudent(prev => ({...prev, enrolledCourses: newSelectedArray}));
+      // Update the main students list state if needed (might cause re-renders)
+      // setAllStudents(updatedStudents);
 
     } catch (err) {
-      console.error("EnrollmentForm: Error during enrollment submission:", err);
+      console.error("Error saving enrollments:", err);
       setSnackbar({ open: true, message: 'Error saving enrollment. Please check console.', severity: 'error' });
     }
   };
 
-  // Handle closing the snackbar
-  const handleCloseSnackbar = (event, reason) => {
+  const handleCloseSnackbar = (_, reason) => {
     if (reason === 'clickaway') return;
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  // Generate unique IDs for aria-describedby
-  const studentHelperTextId = errors.studentId ? "student-helper-text" : undefined;
-  const courseHelperTextId = errors.courseIds ? "course-helper-text" : undefined;
+  // --- Render Logic ---
 
-  console.log("EnrollmentForm: Rendering component. Courses count:", courses.length); // Log before render
+  // Display general error first if it exists
+  if (error) {
+    return (
+        <Container sx={{ py: 3 }}>
+            <Alert severity="error">{error}</Alert>
+            <Button onClick={() => navigate('/studentsmanagement')} sx={{ mt: 2 }}>Back to List</Button>
+        </Container>
+    );
+  }
+
+  // Display loading indicator if any loading is happening
+  if (isLoading) {
+    return <Container sx={{ py: 3, textAlign: 'center' }}><CircularProgress sx={{ color: colors.primaryGreen }} /></Container>;
+  }
 
   return (
-    <Container maxWidth="sm" sx={{ py: 4 }}>
-      {/* Breadcrumbs Navigation */}
+    <Container maxWidth="md" sx={{ py: 3 }}>
       <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
-        <Link component={RouterLink} underline="hover" sx={{ display: 'flex', alignItems: 'center' }} color="inherit" to="/">
-          <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" /> Home
-        </Link>
-        <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
-          <SchoolIcon sx={{ mr: 0.5 }} fontSize="inherit" /> Enroll Student
+        <MuiLink component={RouterLink} to="/" underline="hover" sx={{ display: 'flex', alignItems: 'center', color: colors.secondaryGrey }}>
+          <HomeIcon sx={{ mr: 0.5, color: colors.iconContrastDark }} fontSize="inherit" /> Home
+        </MuiLink>
+        {/* Conditionally link back to students management */}
+        {studentIdFromUrl && (
+            <MuiLink component={RouterLink} to="/studentsmanagement" underline="hover" sx={{ color: colors.secondaryGrey }}>Students Management</MuiLink>
+        )}
+        <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', color: colors.textDark }}>
+          Manage Enrollments
         </Typography>
       </Breadcrumbs>
 
-      {/* Form Container */}
-      <Box component="form" onSubmit={handleSubmit} sx={{ backgroundColor: colors.white, p: { xs: 2, sm: 4 }, borderRadius: 2, boxShadow: 3 }}>
-        <Typography variant="h5" align="center" fontWeight="600" gutterBottom>
-          Enroll Student in Courses
-        </Typography>
+      {/* Title: Show student name if selected, otherwise generic title */}
+      <Typography variant="h4" gutterBottom sx={{ color: colors.textDark, fontWeight: 600 }}>
+        Manage Enrollments
+        {student && `: ${student.firstName} ${student.lastName}`}
+      </Typography>
+      {student && (
+        <Typography variant="body1" sx={{ color: colors.secondaryGrey, mb: 2 }}>(ID: {student.studentId})</Typography>
+      )}
 
-        <Grid container spacing={3}>
-          {/* Student Selection */}
-          <Grid item xs={12}>
-            <FormControl fullWidth error={!!errors.studentId} required>
-              <InputLabel id="student-select-label">Select Student</InputLabel>
-              <Select
-                labelId="student-select-label"
-                id="student-select" // Added id for label association
-                value={selectedStudentId}
-                label="Select Student"
-                onChange={handleStudentChange}
-                sx={{ borderRadius: '6px' }}
-                aria-describedby={studentHelperTextId} // Accessibility link
-              >
-                <MenuItem value="" disabled><em>Select a student...</em></MenuItem>
-                {/* Check if students is an array before mapping */}
-                {Array.isArray(students) && students.map((student, index) => (
-                  // Use optional chaining for safety, provide fallback key
-                  <MenuItem key={student?.studentId || `student-${index}`} value={student?.studentId}>
-                    {`${student?.studentId || 'N/A'} - ${student?.firstName || ''} ${student?.lastName || ''}`.trim() || 'N/A'}
-                  </MenuItem>
-                ))}
-              </Select>
-              {/* Render helper text only if error exists */}
-              {errors.studentId && <FormHelperText id={studentHelperTextId}>{errors.studentId}</FormHelperText>}
-            </FormControl>
-          </Grid>
+      {/* Student Selector: Show ONLY if no studentId came from URL */}
+      {!studentIdFromUrl && (
+        <FormControl fullWidth sx={{ mb: 3 }}>
+          <InputLabel id="student-select-label">Select Student</InputLabel>
+          <Select
+            labelId="student-select-label"
+            id="student-select"
+            value={selectedStudentId}
+            label="Select Student"
+            onChange={handleStudentSelectChange}
+          >
+            <MenuItem value=""><em>-- Select a Student --</em></MenuItem>
+            {allStudents
+                .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
+                .map((s) => (
+                    <MenuItem key={s.studentId} value={s.studentId}>
+                        {s.lastName}, {s.firstName} ({s.studentId})
+                    </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      )}
 
-          {/* Course Selection */}
-          <Grid item xs={12}>
-            {/* Use component="fieldset" for grouping checkboxes */}
-            <FormControl
-              required
-              error={!!errors.courseIds}
-              component="fieldset"
-              sx={{ width: '100%' }}
-              variant="standard" // Use standard variant for fieldset structure
-              aria-describedby={courseHelperTextId} // Accessibility link
-            >
-              <FormLabel component="legend" sx={{ mb: 1, fontWeight: '500' }}>Available Courses</FormLabel>
-              {/* Scrollable Box for Checkboxes */}
-              <Box sx={{
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                  border: '1px solid',
-                  borderColor: errors.courseIds ? 'error.main' : 'rgba(0, 0, 0, 0.23)', // Indicate error on border
-                  borderRadius: '4px',
-                  p: 2,
-                  mb: 1
-              }}>
+      {/* Course Selection Form: Show ONLY if a student is selected (either from URL or dropdown) */}
+      {isValidId(selectedStudentId) && student ? (
+        <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, backgroundColor: colors.white }}>
+          <Box component="form" onSubmit={handleSubmit}>
+            <FormControl error={!!formError} component="fieldset" sx={{ width: '100%' }} variant="standard">
+              <FormLabel component="legend" sx={{ mb: 1, fontWeight: '500', color: colors.textDark }}>Available Courses</FormLabel>
+              <Box sx={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid', borderColor: formError ? colors.errorRed : alpha(colors.secondaryGrey, 0.3), borderRadius: '4px', p: 1, mb: 1 }}>
                 <FormGroup>
-                  {/* Check if courses is an array and has items */}
-                  {Array.isArray(courses) && courses.length > 0 ? (
-                    courses.map((course, index) => {
-                      // Use optional chaining for safety, provide fallback key
-                      const courseId = course?.courseId;
-                      // Skip rendering if course object or id is invalid
-                      if (!courseId || typeof course !== 'object' || course === null) {
-                        console.warn(`EnrollmentForm: Skipping invalid course item at index ${index}:`, course);
-                        return null;
-                      }
-                      return (
-                        <FormControlLabel
-                          key={courseId}
-                          control={
-                            <Checkbox
-                              checked={selectedCourseIds.includes(courseId)}
-                              onChange={handleCourseCheckboxChange}
-                              value={courseId} // Use the actual courseId as value
-                              sx={{ color: colors.greenDark, '&.Mui-checked': { color: colors.green } }}
-                            />
+                  {allCourses.length > 0 ? (
+                    <List dense disablePadding>
+                      {allCourses
+                        .sort((a, b) => (a?.courseName || '').localeCompare(b?.courseName || ''))
+                        .map((course) => {
+                          if (!course || typeof course !== 'object' || !course.courseId) {
+                            console.warn("Skipping invalid course object:", course);
+                            return null;
                           }
-                          // Use optional chaining and fallbacks for all parts of the label
-                          label={`${course?.courseId || 'N/A'} - ${course?.courseName || 'N/A'} - ${course?.dayOfWeek || 'N/A'} ${course?.startTime || 'N/A'}-${course?.endTime || 'N/A'}`}
-                        />
-                      );
-                    })
+                          const courseIdStr = String(course.courseId);
+                          return (
+                            <ListItem key={courseIdStr} disablePadding sx={{ py: 0.5 }}>
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    checked={selectedCourseIds.has(courseIdStr)}
+                                    onChange={handleCourseCheckboxChange}
+                                    value={courseIdStr}
+                                    sx={{ color: colors.secondaryGrey, '&.Mui-checked': { color: colors.primaryGreen } }}
+                                  />
+                                }
+                                label={`${course.courseName || 'N/A'} (${courseIdStr}) - ${course.dayOfWeek || ''} ${course.startTime || ''}-${course.endTime || ''}`}
+                                sx={{ width: '100%', color: colors.textDark, '.MuiFormControlLabel-label': { fontSize: '0.95rem' } }}
+                              />
+                            </ListItem>
+                          );
+                        })
+                      }
+                    </List>
                   ) : (
-                    // Message shown if no courses are loaded or available
-                    <Typography variant="body2" color="textSecondary" sx={{ px: 1 }}>
-                      No courses available to display.
-                    </Typography>
+                    <Typography variant="body2" sx={{ p: 2, color: colors.secondaryGrey }}>No courses available to display.</Typography>
                   )}
                 </FormGroup>
               </Box>
-              {/* Render helper text only if error exists */}
-              {errors.courseIds && <FormHelperText error id={courseHelperTextId}>{errors.courseIds}</FormHelperText>}
+              {formError && <FormHelperText error>{formError}</FormHelperText>}
             </FormControl>
-          </Grid>
 
-          {/* Submit Button */}
-          <Grid item xs={12} textAlign="center" sx={{ mt: 2 }}>
-            <Button
-              variant="contained"
-              type="submit"
-              size="large"
-              startIcon={<SchoolIcon />}
-              sx={{
-                backgroundColor: colors.green,
-                color: colors.text,
-                fontWeight: 500,
-                px: 5,
-                borderRadius: '6px',
-                textTransform: 'none',
-                boxShadow: 'none',
-                '&:hover': {
-                  backgroundColor: colors.greenDark,
-                  boxShadow: 'none'
-                },
-              }}
-              // Disable button briefly after click? Maybe not necessary here.
-            >
-              Enroll Student
-            </Button>
-          </Grid>
-        </Grid>
-      </Box>
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
+              <Button
+                variant="outlined"
+                // Navigate back to list only if accessed specifically, otherwise just stay
+                onClick={() => { if (studentIdFromUrl) navigate('/studentsmanagement'); else setSelectedStudentId(''); /* Clear selection in general mode */}}
+                sx={{ color: colors.secondaryGrey, borderColor: alpha(colors.secondaryGrey, 0.5) }}
+              >
+                {studentIdFromUrl ? 'Back to List' : 'Cancel Selection'}
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<SaveIcon sx={{ color: colors.iconContrastLight }} />}
+                sx={{ backgroundColor: colors.primaryGreen, color: colors.iconContrastLight, '&:hover': { backgroundColor: colors.greenDark } }}
+              >
+                Save Changes
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      ) : (
+        // Show message if in general mode and no student is selected yet
+        !studentIdFromUrl && !selectedStudentId && (
+            <Alert severity="info">Please select a student from the dropdown above to manage their enrollments.</Alert>
+        )
+      )}
 
-      {/* Feedback Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
+      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">{snackbar.message}</Alert>
       </Snackbar>
     </Container>
   );
