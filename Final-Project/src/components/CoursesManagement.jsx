@@ -1,7 +1,7 @@
 // src/components/CoursesManagement.jsx
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, Link as RouterLink, useLocation } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Container, Box, Typography, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, TableSortLabel, TablePagination,
@@ -14,7 +14,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import GroupIcon from '@mui/icons-material/Group';
 import HomeIcon from '@mui/icons-material/Home';
 import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -35,12 +34,6 @@ const colors = {
   green: '#bed630', greenDark: '#a7bc2a', text: '#000000',
   white: '#ffffff', error: '#d32f2f',
 };
-
-const exampleCourses = [
-    { courseId: 'R1001', courseName: 'React Development', creditPoints: 4, semester: 'A', professorsName: 'Dr. Tamar Cohen', dayOfWeek: 'Monday', startTime: '09:00', endTime: '12:00', description: 'Building modern web interfaces with React.', startingDate: '2024-10-28', courseHours: '09:00 - 12:00' },
-    { courseId: 'N2001', courseName: 'Node.js Backend', creditPoints: 4, semester: 'A', professorsName: 'Prof. Avi Levi', dayOfWeek: 'Wednesday', startTime: '13:00', endTime: '16:00', description: 'Server-side development using Node.js and Express.', startingDate: '2024-10-30', courseHours: '13:00 - 16:00' },
-    // ... other example courses
-];
 
 // --- Helper Functions ---
 function descendingComparator(a, b, orderBy) {
@@ -109,28 +102,45 @@ export default function CoursesManagement() {
     return () => { clearTimeout(handler); };
   }, [searchInput]);
 
+  // useEffect for loading data on component mount
   useEffect(() => {
     setLoading(true);
-    let currentCourses = [];
     try {
+      // Load students (Keep this if needed for enrollment counts etc.)
       const storedStudents = JSON.parse(localStorage.getItem(STUDENTS_STORAGE_KEY)) || [];
-      if (Array.isArray(storedStudents)) setStudents(storedStudents); else setStudents([]);
-
-      const storedCoursesString = localStorage.getItem(COURSES_STORAGE_KEY);
-      if (storedCoursesString === null) {
-        currentCourses = exampleCourses;
-        localStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify(currentCourses));
+      if (Array.isArray(storedStudents)) {
+        setStudents(storedStudents);
       } else {
-        const parsedCourses = JSON.parse(storedCoursesString);
-        if (Array.isArray(parsedCourses)) currentCourses = parsedCourses; else currentCourses = [];
+        console.warn("LocalStorage: Invalid student data found.");
+        setStudents([]);
       }
-      setCourses(currentCourses);
+
+      // --- CORRECTED LOGIC FOR LOADING COURSES ---
+      const storedCoursesString = localStorage.getItem(COURSES_STORAGE_KEY);
+      // Try to parse if string exists, otherwise default to empty array
+      const parsedCourses = storedCoursesString ? JSON.parse(storedCoursesString) : [];
+
+      if (Array.isArray(parsedCourses)) {
+        setCourses(parsedCourses); // Set state directly with parsed data or empty array
+      } else {
+        // Handle case where data exists but is not an array (corrupted data)
+        console.error("LocalStorage: Invalid course data found. Expected an array.");
+        setCourses([]); // Set to empty array if data is invalid
+        setSnackbar({ open: true, message: 'Error: Invalid course data format found in storage.', severity: 'error' });
+      }
+      // --- END OF CORRECTED LOGIC ---
+
     } catch (error) {
-      console.error("CourseManagement: Error loading data:", error);
-      setSnackbar({ open: true, message: 'Error loading data.', severity: 'error' });
-      setStudents([]); setCourses([]);
-    } finally { setLoading(false); }
-  }, []);
+      // Catch JSON parsing errors or other unexpected issues
+      console.error("CourseManagement: Error loading data from localStorage:", error);
+      setSnackbar({ open: true, message: 'Error loading data. Check console for details.', severity: 'error' });
+      setStudents([]); // Reset states on error
+      setCourses([]);
+    } finally {
+      setLoading(false); // Ensure loading state is always turned off
+    }
+  }, []); // Empty dependency array is correct, run only once on mount
+
 
   const enrollmentCounts = useMemo(() => {
     const counts = {};
@@ -329,7 +339,6 @@ export default function CoursesManagement() {
     return students.filter(s => !enrolledIds.has(s.studentId));
   }, [students, enrollmentStudentsList, enrollmentCourse]);
 
-  // --- NEW: Memoized sorted list for the enrollment modal ---
   const sortedEnrollmentStudents = useMemo(() => {
     return [...enrollmentStudentsList].sort((a, b) => {
         const nameA = `${a.firstName || ''} ${a.lastName || ''}`.toLowerCase();
@@ -430,10 +439,26 @@ export default function CoursesManagement() {
                           </Tooltip>
                         </TableCell>
                         <TableCell align="right">
-                          <Tooltip title="Duplicate Course"> <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDuplicateCourse(course); }} sx={{ mr: 0.5, color: 'action.active' }}> <ContentCopyIcon fontSize="inherit" /> </IconButton> </Tooltip>
-                          <Tooltip title="View Details"> <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleViewClick(course); }} sx={{ mr: 0.5, color: 'action.active' }}> <VisibilityIcon fontSize="inherit" /> </IconButton> </Tooltip>
-                          <Tooltip title="Edit Course"> <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleEditCourse(course.courseId); }} sx={{ mr: 0.5, color: 'primary.main' }}> <EditIcon fontSize="inherit" /> </IconButton> </Tooltip>
-                          <Tooltip title="Delete Course"> <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteClick(course.courseId, course.courseName); }} sx={{ color: colors.error }}> <DeleteIcon fontSize="inherit" /> </IconButton> </Tooltip>
+                          <Tooltip title="Duplicate Course">
+                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDuplicateCourse(course); }} sx={{ mr: 0.5, color: 'action.active' }}>
+                              <ContentCopyIcon fontSize="inherit" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="View Details">
+                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleViewClick(course); }} sx={{ mr: 0.5, color: 'action.active' }}>
+                              <VisibilityIcon fontSize="inherit" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Edit Course">
+                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleEditCourse(course.courseId); }} sx={{ mr: 0.5, color: 'primary.main' }}>
+                              <EditIcon fontSize="inherit" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete Course">
+                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteClick(course.courseId, course.courseName); }} sx={{ color: colors.error }}>
+                              <DeleteIcon fontSize="inherit" />
+                            </IconButton>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ) : null
@@ -462,10 +487,10 @@ export default function CoursesManagement() {
               {viewCourse ? (
                   <Stack spacing={1.5}>
                       <Typography variant="h6" gutterBottom>{viewCourse.courseName || 'N/A'} ({viewCourse.courseId})</Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}> <PersonIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }}/> <Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>Professor:</Typography> <Typography variant="body1">{viewCourse.professorsName || 'N/A'}</Typography> </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}> <SchoolIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }}/> <Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>Credits:</Typography> <Typography variant="body1">{viewCourse.creditPoints ?? 'N/A'}</Typography> </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}> <ScheduleIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }}/> <Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>Schedule:</Typography> <Typography variant="body1">{`${viewCourse.dayOfWeek || 'N/A'} ${viewCourse.startTime || 'N/A'}-${viewCourse.endTime || 'N/A'}`}</Typography> </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}> <CalendarMonthIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }}/> <Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>Start Date:</Typography> <Typography variant="body1">{viewCourse.startingDate || 'N/A'}</Typography> </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}> <PersonIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }}/><Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>Professor:</Typography> <Typography variant="body1">{viewCourse.professorsName || 'N/A'}</Typography> </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}> <SchoolIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }}/><Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>Credits:</Typography> <Typography variant="body1">{viewCourse.creditPoints ?? 'N/A'}</Typography> </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}> <ScheduleIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }}/><Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>Schedule:</Typography> <Typography variant="body1">{`${viewCourse.dayOfWeek || 'N/A'} ${viewCourse.startTime || 'N/A'}-${viewCourse.endTime || 'N/A'}`}</Typography> </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}> <CalendarMonthIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }}/><Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>Start Date:</Typography> <Typography variant="body1">{viewCourse.startingDate || 'N/A'}</Typography> </Box>
                       <Box> <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Description:</Typography> <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', pl: 1 }}>{viewCourse.description || 'N/A'}</Typography> </Box>
                   </Stack>
               ) : (
@@ -486,12 +511,11 @@ export default function CoursesManagement() {
               {enrollmentCourse ? (
                   <>
                       <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-                          Currently Enrolled ({sortedEnrollmentStudents.length}) {/* Use sorted list length */}
+                          Currently Enrolled ({sortedEnrollmentStudents.length})
                       </Typography>
                       {sortedEnrollmentStudents.length > 0 ? (
                           <Paper variant="outlined" sx={{ maxHeight: 200, overflow: 'auto', mb: 2 }}>
                               <List dense>
-                                  {/* Use sorted list for rendering */}
                                   {sortedEnrollmentStudents.map(student => (
                                       <ListItem key={student.studentId}
                                         secondaryAction={
@@ -516,7 +540,7 @@ export default function CoursesManagement() {
 
                       <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>Enroll New Student</Typography>
                       <Autocomplete
-                          options={enrollableStudents} // Keep using original for options
+                          options={enrollableStudents}
                           getOptionLabel={(option) => `${option.firstName || ''} ${option.lastName || ''} (${option.studentId})`}
                           value={selectedStudentToEnroll}
                           onChange={(event, newValue) => {

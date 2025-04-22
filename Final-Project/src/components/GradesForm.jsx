@@ -232,12 +232,10 @@ export default function GradesForm() {
 
       <Box component="form" onSubmit={handleSubmit} sx={{ backgroundColor: colors.white, p: 4, borderRadius: 2, boxShadow: 3 }}>
         <Typography variant="h5" align="center" fontWeight="600" gutterBottom> Grades Entry </Typography>
-        {/* Added Subtitle */}
         <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 3 }}>
         Enter grades for submitted assignments in the selected course
         </Typography>
         <Grid container spacing={3}>
-          {/* Course Select */}
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth required error={!selectedCourseCode && !!errors.form}>
               <InputLabel>Select Course</InputLabel>
@@ -248,7 +246,6 @@ export default function GradesForm() {
               {!selectedCourseCode && errors.form && <FormHelperText error>{errors.form}</FormHelperText>}
             </FormControl>
           </Grid>
-          {/* Assignment Select */}
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth required disabled={!selectedCourseCode || loading.assignments || assignmentOptions.length === 0} error={!selectedAssignmentCode && !!errors.form}>
               <InputLabel>Select Assignment</InputLabel>
@@ -260,7 +257,6 @@ export default function GradesForm() {
             </FormControl>
           </Grid>
 
-          {/* Student Grades List */}
           <Grid item xs={12}>
             {loading.students ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}> <CircularProgress sx={{ color: colors.green }} /> </Box>
@@ -286,7 +282,12 @@ export default function GradesForm() {
                     const studentIdStr = String(student.studentId);
                     return (
                       <ListItem key={studentIdStr} divider={index < studentsToGrade.length - 1}>
-                        <ListItemText primary={`${student.studentName || 'Unknown Student'} (${studentIdStr})`} sx={{ flexBasis: '50%' }} />
+                        {/* --- CORRECTED ListItemText --- */}
+                        <ListItemText
+                          primary={`${(student.firstName || '').trim()} ${(student.lastName || '').trim() || 'Unknown Student'} (${studentIdStr})`}
+                          sx={{ flexBasis: '50%' }}
+                        />
+                        {/* --- END CORRECTION --- */}
                         <TextField
                           size="small"
                           variant="outlined"
@@ -309,7 +310,6 @@ export default function GradesForm() {
             ) : null }
           </Grid>
 
-          {/* Submit Button */}
           <Grid item xs={12} textAlign="center" sx={{ mt: 2 }}>
             <Button
               variant="contained"
