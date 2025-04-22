@@ -225,7 +225,7 @@ export default function EnrollmentForm() {
             <MuiLink component={RouterLink} to="/studentsmanagement" underline="hover" sx={{ color: colors.secondaryGrey }}>Students Management</MuiLink>
         )}
         <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', color: colors.textDark }}>
-          Manage Enrollments
+         Manage Enrollments
         </Typography>
       </Breadcrumbs>
 
