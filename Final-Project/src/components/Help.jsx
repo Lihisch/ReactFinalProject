@@ -23,7 +23,7 @@ const colors = {
   grey: '#e0e0e0' // Added grey for divider
 };
 
-// Help topics relevant only for students (Translated to English)
+
 const allHelpTopics = [
   {
     key: 'view_courses',
@@ -69,7 +69,7 @@ const allHelpTopics = [
     key: 'technical_support',
     icon: <ContactSupportIcon fontSize="large" sx={{ color: colors.green }} />,
     title: 'Technical Support',
-    description: 'For additional questions or technical issues.', // Description remains the same
+    description: 'For additional questions or technical issues.',
     details: [ // Updated details array
       'Please contact the academic administration or the IT support center.',
       'Contact details are available on the institution\'s main website.'
@@ -77,9 +77,7 @@ const allHelpTopics = [
   },
 ];
 
-// Separate the technical support topic
 const technicalSupportTopic = allHelpTopics.find(topic => topic.key === 'technical_support');
-// Filter out the technical support topic for the main grid
 const studentHelpTopics = allHelpTopics.filter(topic => topic.key !== 'technical_support');
 
 
@@ -90,7 +88,7 @@ export default function Help() {
     setSearchTerm(event.target.value);
   };
 
-  // Filter only the main help topics (excluding technical support)
+
   const filteredTopics = useMemo(() => {
     if (!searchTerm) return studentHelpTopics;
     const lower = searchTerm.toLowerCase();
@@ -110,7 +108,6 @@ export default function Help() {
           Home
         </Link>
         <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
-          <HelpOutlineIcon sx={{ mr: 0.5 }} fontSize="inherit" />
           Help Center
         </Typography>
       </Breadcrumbs>
@@ -180,7 +177,7 @@ export default function Help() {
           )}
         </Grid>
 
-        {/* Technical Support Section - Moved outside the grid and centered */}
+        {/* Technical Support Section - */}
         {technicalSupportTopic && (
           <Box sx={{ mt: 6, pt: 4, textAlign: 'center', borderTop: `1px solid ${colors.grey}` }}>
              <Box sx={{ display: 'inline-flex', alignItems: 'center', mb: 1 }}>
@@ -192,13 +189,11 @@ export default function Help() {
              {/* Display the description */}
              <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
                 {technicalSupportTopic.description}
-             </Typography>
-             {/* Display the updated details as a bulleted list */}
-             {/* Use List component similar to the cards, but center the list items */}
+             </Typography>  
              <List dense disablePadding sx={{ display: 'inline-block', textAlign: 'left', maxWidth: '100%' }}>
                 {technicalSupportTopic.details.map((detail, index) => (
-                  <ListItem key={index} disableGutters sx={{ py: 0.2, justifyContent: 'center' }}> {/* Center list item content */}
-                    <ListItemIcon sx={{ minWidth: '24px', mr: 0.5 }}> {/* Adjust margin if needed */}
+                  <ListItem key={index} disableGutters sx={{ py: 0.2, justifyContent: 'center' }}> 
+                    <ListItemIcon sx={{ minWidth: '24px', mr: 0.5 }}> 
                       <FiberManualRecordIcon sx={{ fontSize: '0.7rem', color: colors.greenDark }} />
                     </ListItemIcon>
                     <ListItemText

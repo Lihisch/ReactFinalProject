@@ -26,7 +26,7 @@ export default function AssignmentForm() {
   const initialFormData = {
     assignmentCode: '',
     courseId: '',
-    courseName: '', // Still useful internally or if needed later
+    courseName: '', 
     assignmentName: '',
     assignmentType: '',
     minParticipants: '',
@@ -161,7 +161,7 @@ export default function AssignmentForm() {
     const { name, value } = e.target;
     let updatedFormData = { ...formData, [name]: value };
 
-    // *** CHANGED: Handle courseId change ***
+    
     if (name === 'courseId') {
       const selectedCourse = courseOptions.find(course => course.courseId === value);
       updatedFormData.courseName = selectedCourse ? selectedCourse.courseName : '';
@@ -329,7 +329,7 @@ export default function AssignmentForm() {
                     ))
                   ) : ( <MenuItem value="" disabled>No courses available</MenuItem> )}
                 </Select>
-                {/* *** CHANGED: Error helper text targets courseId *** */}
+              
                 {errors.courseId && <FormHelperText>{errors.courseId}</FormHelperText>}
               </FormControl>
             </Grid>
