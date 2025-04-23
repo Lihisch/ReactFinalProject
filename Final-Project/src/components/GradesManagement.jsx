@@ -536,7 +536,7 @@ export default function GradesManagement() {
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={4} md={2}>
-             <TextField fullWidth size="small" variant="outlined" placeholder="Search by name or ID..." value={searchTerm} onChange={handleSearchChange} disabled={!selectedCourse} InputProps={{ startAdornment: ( <InputAdornment position="start"> <SearchIcon fontSize="small" /> </InputAdornment> ), }} />
+             <TextField fullWidth size="small" variant="outlined" placeholder="Search by name or ID..." value={searchTerm} onChange={handleSearchChange} disabled={!selectedCourse} slotProps={{ startAdornment: ( <InputAdornment position="start"> <SearchIcon fontSize="small" /> </InputAdornment> ), }} />
           </Grid>
           <Grid item xs={12} sm={4} md={2}>
              <FormControl fullWidth size="small" disabled={!selectedCourse}>
@@ -623,7 +623,7 @@ export default function GradesManagement() {
                             variant="outlined"
                             autoFocus
                             sx={{ width: '70px' }}
-                            InputProps={{ inputProps: { min: 0, max: 100, step: "any" } }}
+                            slotProps={{ slotPropsi: { min: 0, max: 100, step: "any" } }}
                             onKeyDown={(e) => { if (e.key === 'Enter') { handleSaveInlineEdit(); e.preventDefault(); } else if (e.key === 'Escape') { handleCancelEdit(); } }}
                             onClick={(e) => e.stopPropagation()}
                           />

@@ -253,7 +253,7 @@ export default function CourseForm() {
                   helperText={errors.courseId}
                   required
                   disabled={isEditMode}
-                  inputProps={{
+                  slotProps={{
                       maxLength: 5,
                       style: {
                           textTransform: 'uppercase',
@@ -261,7 +261,7 @@ export default function CourseForm() {
                           color: isEditMode ? 'text.disabled' : 'inherit',
                       }
                   }}
-                  InputProps={ isEditMode ? {} : {
+                  slotPropss={ isEditMode ? {} : {
                     endAdornment: (
                       <InputAdornment position="end">
                         <Tooltip
@@ -283,7 +283,7 @@ export default function CourseForm() {
               </Grid>
 
               <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Credit Points" name="creditPoints" type="number" inputProps={{ min: 1, step: "any" }} value={formData.creditPoints} onChange={handleChange} error={!!errors.creditPoints} helperText={errors.creditPoints} required />
+                <TextField fullWidth label="Credit Points" name="creditPoints" type="number" slotProps={{ min: 1, step: "any" }} value={formData.creditPoints} onChange={handleChange} error={!!errors.creditPoints} helperText={errors.creditPoints} required />
               </Grid>
 
               <Grid item xs={12} sm={6}>

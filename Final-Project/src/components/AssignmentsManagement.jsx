@@ -1,3 +1,4 @@
+// src/components/AssignmentsManagement.jsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
@@ -25,36 +26,17 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import { format, isPast, parseISO, isValid } from 'date-fns';
 
+// Simplified color palette, similar to GradesManagement
 const colors = {
-  green: '#bed630',
-  greenDark: '#a7bc2a',
-  text: '#000000', // Default text color, good for contrast on light backgrounds
+  headerBackground: '#e0e0e0', // Light grey for table header
+  headerText: '#000000',       // Black text for table header
+  filterBarBg: '#fafafa',       // Very light grey for filter area
   white: '#ffffff',
-  grey: '#e0e0e0',
-  headerBackground: '#e0e0e0',
-  headerText: '#000000',
-  submittedGreen: '#4caf50', // For the 'Active' number
-
-  // ---  Filled Button Colors ---
-  editButtonColor: '#ffb74d', // Orange 300
-  gradeButtonColor: '#81c784', // Green 300
-  deleteButtonColor: '#e57373', // Red 300
-
-  // ---  Pastel Colors for Cards ---
-  pastelTotalBg: '#eef6fc', // Very Light Blue
-  pastelActiveBg: '#f1f9f1', // Very Light Green
-  pastelPastDueBg: '#fef3f6', // Very Light Pink
-
-  // --- Filter Bar Background ---
-  filterBarBg: '#fafafa',
-
-  // ---  Chip Colors ---
-  chipIndividualBg: '#bbdefb', // Blue 100
-  chipGroupBg: '#ffe0b2',      // Orange 100
-  chipActiveBg: '#b3e5fc',    // Light Blue 100
-  chipPastDueBg: '#f8bbd0',   // Pink 100
-  chipDefaultBg: '#eeeeee',   // Grey 200
-  chipTextColor: '#333333',   // Dark grey text for better contrast on light chips
+  text: '#000000',
+  green: '#bed630', // Added green from CoursesManagement
+  greenDark: '#a7bc2a', // Added dark green from CoursesManagement
+  // Using standard MUI semantic colors (success, error, warning, primary, default)
+  // instead of custom hex codes for buttons and chips where appropriate.
 };
 
 
@@ -351,13 +333,26 @@ export default function AssignmentsManagement() {
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h4" component="h1" fontWeight="600"> Assignment Management </Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddAssignment} sx={{ backgroundColor: colors.green, color: colors.text, '&:hover': { backgroundColor: colors.greenDark } }}> Add Assignment </Button>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={handleAddAssignment}
+          sx={{
+            backgroundColor: colors.green, // Use green color
+            color: colors.text,       // Use black text
+            '&:hover': {
+              backgroundColor: colors.greenDark // Use darker green on hover
+            }
+          }}
+        >
+          Add Assignment
+        </Button>
       </Box>
 
       {/* --- Stats Cards --- */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={4}>
-          <Card sx={{ backgroundColor: colors.pastelTotalBg, height: '100%', boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)' }}>
+          <Card sx={{ height: '100%', boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)' }}>
             <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2 }}>
               <Typography sx={{ fontSize: 14, display:'flex', alignItems:'center', gap: 1, mb: 1 }} color="text.secondary" gutterBottom>
                 <AssignmentIcon fontSize='small' sx={{ color: 'action.active' }}/> Total Assignments
@@ -367,22 +362,22 @@ export default function AssignmentsManagement() {
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
-          <Card sx={{ backgroundColor: colors.pastelActiveBg, height: '100%', boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)' }}>
+          <Card sx={{ height: '100%', boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)' }}>
             <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2 }}>
               <Typography sx={{ fontSize: 14, display:'flex', alignItems:'center', gap: 1, mb: 1 }} color="text.secondary" gutterBottom>
                 <AccessTimeIcon fontSize='small' sx={{ color: 'action.active' }}/> Active
               </Typography>
-              <Typography variant="h4" component="div" fontWeight="medium" sx={{ color: colors.submittedGreen }}> {stats.active} </Typography>
+              <Typography variant="h4" component="div" fontWeight="medium" sx={{ color: 'success.main' }}> {stats.active} </Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
-          <Card sx={{ backgroundColor: colors.pastelPastDueBg, height: '100%', boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)' }}>
+          <Card sx={{ height: '100%', boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)' }}>
             <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2 }}>
               <Typography sx={{ fontSize: 14, display:'flex', alignItems:'center', gap: 1, mb: 1 }} color="text.secondary" gutterBottom>
                 <EventBusyIcon fontSize='small' sx={{ color: 'action.active' }}/> Past Due
               </Typography>
-              <Typography variant="h4" component="div" fontWeight="medium" sx={{ color: colors.deleteButtonColor }}> {stats.pastDue} </Typography>
+              <Typography variant="h4" component="div" fontWeight="medium" sx={{ color: 'error.main' }}> {stats.pastDue} </Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -393,7 +388,7 @@ export default function AssignmentsManagement() {
       {/* --- Filters & Search Bar --- */}
       <Paper elevation={2} sx={{ p: 2, mb: 3, backgroundColor: colors.filterBarBg }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={4} md={3}> <TextField fullWidth size="small" variant="outlined" placeholder="Search..." value={searchTerm} onChange={handleSearchChange} InputProps={{ startAdornment: ( <InputAdornment position="start"> <SearchIcon fontSize="small" /> </InputAdornment> ), }} /> </Grid>
+          <Grid item xs={12} sm={4} md={3}> <TextField fullWidth size="small" variant="outlined" placeholder="Search..." value={searchTerm} onChange={handleSearchChange} slotProps={{ startAdornment: ( <InputAdornment position="start"> <SearchIcon fontSize="small" /> </InputAdornment> ), }} /> </Grid>
           <Grid item><FilterListIcon color="action" /></Grid>
           <Grid item xs={12} sm={3} md={3}> <FormControl fullWidth size="small"> <InputLabel>Filter by Course</InputLabel> <Select value={courseFilter} label="Filter by Course" onChange={handleCourseFilterChange}> <MenuItem value=""><em>All Courses</em></MenuItem> {courseOptions.map((course) => ( <MenuItem key={course.courseId} value={course.courseId}> {course.courseId} - {course.courseName} </MenuItem> ))} </Select> </FormControl> </Grid>
           <Grid item xs={12} sm={3} md={3}> <FormControl fullWidth size="small"> <InputLabel>Filter by Status</InputLabel> <Select value={statusFilter} label="Filter by Status" onChange={handleStatusFilterChange}> <MenuItem value=""><em>All</em></MenuItem> <MenuItem value="Active">Active</MenuItem> <MenuItem value="Past Due">Past Due</MenuItem> </Select> </FormControl> </Grid>
@@ -417,7 +412,7 @@ export default function AssignmentsManagement() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {isLoading ? ( <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 4 }}><CircularProgress sx={{ color: colors.green }} /><Typography sx={{ mt: 1 }}>Loading...</Typography></TableCell></TableRow> )
+              {isLoading ? ( <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 4 }}><CircularProgress /><Typography sx={{ mt: 1 }}>Loading...</Typography></TableCell></TableRow> )
                : error ? ( <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 4 }}><Typography color="error">{error}</Typography><Button onClick={fetchInitialData} sx={{ mt: 1 }}>Retry</Button></TableCell></TableRow> )
                : processedAssignments.length === 0 ? ( <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 4 }}><Typography>No assignments match filters/search.</Typography></TableCell></TableRow> )
                : (
@@ -436,11 +431,8 @@ export default function AssignmentsManagement() {
                            <Chip
                              label={assign.assignmentType}
                              size="small"
-                             sx={{
-                               backgroundColor: assign.assignmentType === 'Group' ? colors.chipGroupBg : colors.chipIndividualBg,
-                               color: colors.chipTextColor, // Use a consistent text color
-                               fontWeight: 500
-                             }}
+                             variant="outlined"
+                             color={assign.assignmentType === 'Group' ? 'primary' : 'default'}
                            />
                          ) : 'N/A'}
                       </TableCell>
@@ -451,14 +443,12 @@ export default function AssignmentsManagement() {
                            <Chip
                              label={assign.status}
                              size="small"
-                             sx={{
-                               backgroundColor:
-                                 assign.status === 'Active' ? colors.chipActiveBg :
-                                 assign.status === 'Past Due' ? colors.chipPastDueBg :
-                                 colors.chipDefaultBg, // Default for Unknown/Invalid
-                               color: colors.chipTextColor, // Use a consistent text color
-                               fontWeight: 500
-                             }}
+                             variant="outlined"
+                             color={
+                               assign.status === 'Active' ? 'success' :
+                               assign.status === 'Past Due' ? 'error' :
+                               'default'
+                             }
                            />
                          ) : ( <Typography variant="caption" color="text.secondary">-</Typography> )}
                       </TableCell>
@@ -473,9 +463,9 @@ export default function AssignmentsManagement() {
                            </Box>
                         </Tooltip>
                         <Tooltip title="View Details"><IconButton size="small" onClick={() => handleOpenInfoDialog(assign)} color="default"><InfoIcon fontSize="inherit" /></IconButton></Tooltip>
-                        <Tooltip title="Edit Assignment"><IconButton size="small" onClick={() => handleEditAssignment(assign.assignmentCode)} sx={{ color: colors.editButtonColor }}><EditIcon fontSize="inherit" /></IconButton></Tooltip>
-                        <Tooltip title="Grade Assignment"><IconButton size="small" onClick={() => handleNavigateToGrading(assign.assignmentCode, assign.courseIdentifier)} sx={{ color: colors.gradeButtonColor }} disabled={!assign.courseIdentifier}><GradingIcon fontSize="inherit" /></IconButton></Tooltip>
-                        <Tooltip title="Delete Assignment"><IconButton size="small" onClick={() => handleOpenDeleteDialog(assign.assignmentCode, assign.assignmentName)} sx={{ color: colors.deleteButtonColor }}><DeleteIcon fontSize="inherit" /></IconButton></Tooltip>
+                        <Tooltip title="Edit Assignment"><IconButton size="small" onClick={() => handleEditAssignment(assign.assignmentCode)} color="primary"><EditIcon fontSize="inherit" /></IconButton></Tooltip>
+                        <Tooltip title="Grade Assignment"><IconButton size="small" onClick={() => handleNavigateToGrading(assign.assignmentCode, assign.courseIdentifier)} color="success" disabled={!assign.courseIdentifier}><GradingIcon fontSize="inherit" /></IconButton></Tooltip>
+                        <Tooltip title="Delete Assignment"><IconButton size="small" onClick={() => handleOpenDeleteDialog(assign.assignmentCode, assign.assignmentName)} color="error"><DeleteIcon fontSize="inherit" /></IconButton></Tooltip>
                       </TableCell>
                     </TableRow>
                   );
@@ -496,7 +486,7 @@ export default function AssignmentsManagement() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDeleteDialog} color="primary">Cancel</Button>
-          <Button onClick={handleConfirmDelete} sx={{ color: colors.deleteButtonColor }} autoFocus>Delete</Button>
+          <Button onClick={handleConfirmDelete} color="error" autoFocus>Delete</Button>
         </DialogActions>
       </Dialog>
 

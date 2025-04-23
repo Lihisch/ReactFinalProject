@@ -375,7 +375,7 @@ export default function CoursesManagement() {
             </Tooltip>
           ) : (
             <>
-              <TextField label="Search..." variant="outlined" size="small" value={searchInput} onChange={handleSearchInputChange} InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon /></InputAdornment>) }} sx={{ width: { xs: '100%', sm: 250 } }} />
+              <TextField label="Search..." variant="outlined" size="small" value={searchInput} onChange={handleSearchInputChange} slotProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon /></InputAdornment>) }} sx={{ width: { xs: '100%', sm: 250 } }} />
               <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddCourse} sx={{ backgroundColor: colors.green, color: colors.text, '&:hover': { backgroundColor: colors.greenDark }, flexShrink: 0 }}> Add Course </Button>
             </>
           )}
@@ -385,7 +385,7 @@ export default function CoursesManagement() {
           <Table sx={{ minWidth: 900 }} aria-label="courses table" size="small">
             <TableHead sx={{ backgroundColor: 'grey.100' }}>
               <TableRow>
-                <TableCell padding="checkbox"> <Checkbox color="primary" indeterminate={numSelected > 0 && numSelected < rowCount} checked={rowCount > 0 && numSelected === rowCount} onChange={handleSelectAllClick} inputProps={{ 'aria-label': 'select all courses' }} /> </TableCell>
+                <TableCell padding="checkbox"> <Checkbox color="primary" indeterminate={numSelected > 0 && numSelected < rowCount} checked={rowCount > 0 && numSelected === rowCount} onChange={handleSelectAllClick} slotProps={{ 'aria-label': 'select all courses' }} /> </TableCell>
                 {headCells.map((headCell) => (
                   <TableCell key={headCell.id} align={headCell.align || 'left'} padding={headCell.padding || 'normal'} sortDirection={orderBy === headCell.id ? order : false} sx={{ fontWeight: 'bold', ...(orderBy === headCell.id && { bgcolor: 'action.selected' }) }}>
                     {headCell.sortable ? (
@@ -415,7 +415,7 @@ export default function CoursesManagement() {
                   return (
                     course && course.courseId ? (
                       <TableRow hover onClick={(event) => { if (event.target.type !== 'checkbox' && !event.target.closest('button, .enrollment-chip')) { handleCheckboxClick(event, course.courseId); } }} role="checkbox" aria-checked={isItemSelected} tabIndex={-1} key={course.courseId} selected={isItemSelected} sx={{ cursor: 'pointer', '&.Mui-selected': { bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity) } }}>
-                        <TableCell padding="checkbox"> <Checkbox color="primary" checked={isItemSelected} onChange={(event) => handleCheckboxClick(event, course.courseId)} inputProps={{ 'aria-labelledby': labelId }} /> </TableCell>
+                        <TableCell padding="checkbox"> <Checkbox color="primary" checked={isItemSelected} onChange={(event) => handleCheckboxClick(event, course.courseId)} slotProps={{ 'aria-labelledby': labelId }} /> </TableCell>
                         <TableCell component="th" id={labelId} scope="row">{course.courseId}</TableCell>
                         <TableCell>{course.courseName || 'N/A'}</TableCell>
                         <TableCell>{course.professorsName || 'N/A'}</TableCell>

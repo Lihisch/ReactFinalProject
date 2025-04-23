@@ -25,26 +25,20 @@ import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import TablePagination from '@mui/material/TablePagination';
 
+// Consistent color palette similar to GradesManagement and AssignmentsManagement
 const colors = {
-  primaryGreenBase: '#bed630',
-  primaryGreen: '#7da321',
-  greenDark: '#5a7d00',
-  backgroundGrey: '#f5f5f5',
-  textDark: '#333333',
+  headerBackground: '#e0e0e0', // Light grey for table header
+  headerText: '#000000',       // Black text for table header
+  filterBarBg: '#fafafa',       // Very light grey for filter area
   white: '#ffffff',
-  secondaryGrey: '#757575',
-  errorRed: '#d32f2f',
-  selectedRowBg: '#eeeeee',
-  filterBarBg: '#fafafa',
-  iconContrastLight: '#ffffff',
-  iconContrastDark: '#555555',
+  text: '#000000',
+  // Using standard MUI semantic colors (success, error, warning, primary, default)
 };
 
 const STUDENTS_STORAGE_KEY = 'students';
 const COURSES_STORAGE_KEY = 'courses';
 const SUBMISSIONS_STORAGE_KEY = 'submissions';
 
-// Helper function to check if a value is valid (not null, undefined, or empty string)
 const isValidId = (id) => id != null && id !== '';
 
 export default function StudentsManagement() {
@@ -64,7 +58,7 @@ export default function StudentsManagement() {
   const [confirmDeleteDialogOpen, setConfirmDeleteDialogOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [viewCoursesDialogOpen, setViewCoursesDialogOpen] = useState(false);
-  const [studentToView, setStudentToView] = useState(null); // Holds the student object for the dialog
+  const [studentToView, setStudentToView] = useState(null);
   const [stats, setStats] = useState({ total: 0, enrolled: 0, notEnrolled: 0 });
   const [editingStudentId, setEditingStudentId] = useState(null);
   const [editFirstName, setEditFirstName] = useState('');
@@ -79,12 +73,10 @@ export default function StudentsManagement() {
         const parsed = JSON.parse(item);
         if (Array.isArray(parsed)) {
           data = parsed;
-          // Validate studentId within students data upon loading
           if (key === STUDENTS_STORAGE_KEY) {
             const invalidStudents = data.filter(s => !isValidId(s?.studentId));
             if (invalidStudents.length > 0) {
               console.warn(`Found ${invalidStudents.length} student entries with missing or invalid studentId in localStorage key "${key}". Filtering them out for processing.`, invalidStudents);
-              // Filter out invalid students to prevent issues later
               data = data.filter(s => isValidId(s?.studentId));
             }
           }
@@ -95,7 +87,7 @@ export default function StudentsManagement() {
     } catch (e) {
       console.error(`Error parsing ${key} from localStorage`, e);
       setError(`Failed to load or parse data for ${key}. Check console and localStorage.`);
-      data = defaultValue; // Ensure default value on critical parse error
+      data = defaultValue;
     }
     return data;
   };
@@ -107,9 +99,8 @@ export default function StudentsManagement() {
     try {
       const studentsData = safeJsonParse(STUDENTS_STORAGE_KEY);
       const coursesData = safeJsonParse(COURSES_STORAGE_KEY);
-      // Only set state if no critical error occurred during parsing
       if (error === null) {
-          setStudents(studentsData); // studentsData is now pre-filtered for valid IDs
+          setStudents(studentsData);
           setCourses(coursesData);
       }
     } catch (err) {
@@ -118,7 +109,7 @@ export default function StudentsManagement() {
     } finally {
       setIsLoading(false);
     }
-  }, [error]); // Dependency on error state
+  }, [error]);
 
   useEffect(() => {
     fetchData();
@@ -126,7 +117,7 @@ export default function StudentsManagement() {
 
   useEffect(() => {
     if (Array.isArray(students)) {
-        const total = students.length; // Already filtered for valid IDs
+        const total = students.length;
         const enrolled = students.filter(s => Array.isArray(s.enrolledCourses) && s.enrolledCourses.length > 0).length;
         const notEnrolled = total - enrolled;
         setStats({ total, enrolled, notEnrolled });
@@ -136,12 +127,10 @@ export default function StudentsManagement() {
   }, [students]);
 
   const processedStudents = useMemo(() => {
-    // students array is already pre-filtered for valid IDs in fetchData/safeJsonParse
     if (!Array.isArray(students)) return [];
 
     let filtered = [...students];
 
-    // Apply filters (studentId is guaranteed valid here)
     if (selectedCourseFilter) {
       filtered = filtered.filter(student =>
         Array.isArray(student.enrolledCourses) &&
@@ -156,7 +145,6 @@ export default function StudentsManagement() {
         String(student.studentId).toLowerCase().includes(lowerSearchTerm)
       );
     }
-    // Apply sorting
     filtered.sort((a, b) => {
         let valA = a[orderBy];
         let valB = b[orderBy];
@@ -220,12 +208,11 @@ export default function StudentsManagement() {
 
 
   const handleAddStudent = () => {
-    navigate('/studentform'); // Changed from '/admin/students/add'
+    navigate('/studentform');
   };
 
 
   const handleStartEdit = (student) => {
-    // ID validity checked by filtering in processedStudents
     setEditingStudentId(student.studentId);
     setEditFirstName(student.firstName || '');
     setEditLastName(student.lastName || '');
@@ -247,7 +234,7 @@ export default function StudentsManagement() {
     try {
         const editingIdStr = String(editingStudentId);
         const updatedStudents = students.map(s =>
-            String(s.studentId) === editingIdStr // studentId is valid here
+            String(s.studentId) === editingIdStr
             ? { ...s, firstName: editFirstName.trim(), lastName: editLastName.trim() }
             : s
         );
@@ -262,7 +249,6 @@ export default function StudentsManagement() {
   };
 
   const handleOpenDeleteDialog = (student) => {
-    // ID validity checked by filtering in processedStudents
     setStudentToDelete(student);
     setConfirmDeleteDialogOpen(true);
   };
@@ -276,12 +262,11 @@ export default function StudentsManagement() {
     const idStr = String(studentIdToDelete ?? '');
     if (idStr === '') return;
 
-    const studentInfo = students.find(s => String(s.studentId) === idStr); // studentId is valid here
+    const studentInfo = students.find(s => String(s.studentId) === idStr);
     const studentDisplayName = studentInfo ? `${studentInfo.firstName || ''} ${studentInfo.lastName || ''}`.trim() : `ID: ${idStr}`;
     try {
-      const updatedStudents = students.filter(s => String(s.studentId) !== idStr); // studentId is valid here
+      const updatedStudents = students.filter(s => String(s.studentId) !== idStr);
       const currentSubmissions = safeJsonParse(SUBMISSIONS_STORAGE_KEY);
-      // Assuming submissions might have invalid studentId, check safely
       const updatedSubmissions = currentSubmissions.filter(sub => String(sub?.studentId) !== idStr);
       localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updatedStudents));
       localStorage.setItem(SUBMISSIONS_STORAGE_KEY, JSON.stringify(updatedSubmissions));
@@ -297,20 +282,17 @@ export default function StudentsManagement() {
   };
 
   const handleOpenViewCoursesDialog = (student) => {
-     // ID validity checked by filtering in processedStudents
-    console.log("Opening view dialog for student:", student); // Log the student object being viewed
+    console.log("Opening view dialog for student:", student);
     setStudentToView(student);
     setViewCoursesDialogOpen(true);
   };
 
   const handleCloseViewCoursesDialog = () => {
     setViewCoursesDialogOpen(false);
-    // Delay clearing studentToView slightly to ensure onClick handlers can access it
     setTimeout(() => setStudentToView(null), 150);
   };
 
    const getEnrolledCourseNames = useMemo(() => {
-    // Add check for studentToView validity
     if (!studentToView || !isValidId(studentToView.studentId) || !Array.isArray(studentToView.enrolledCourses) || !courses.length) return [];
     const courseMap = new Map(courses.map(c => [String(c?.courseId), c?.courseName]));
     return studentToView.enrolledCourses
@@ -318,32 +300,23 @@ export default function StudentsManagement() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [studentToView, courses]);
 
-  // *** CRITICAL FIX AREA ***
   const handleManageEnrollment = (studentId) => {
-      // studentId here comes from studentToView?.studentId in the onClick
       const idToNavigate = String(studentId ?? '');
-
-      console.log("[handleManageEnrollment] Received studentId:", studentId, " | Processed idToNavigate:", idToNavigate); // DETAILED LOG
-
-      // Use the helper function for a clear check
+      console.log("[handleManageEnrollment] Received studentId:", studentId, " | Processed idToNavigate:", idToNavigate);
       if (!isValidId(idToNavigate)) {
           console.error("[handleManageEnrollment] FAILED: Invalid ID. Navigation aborted.");
           setSnackbar({ open: true, message: 'Cannot manage enrollment: Student ID is missing or invalid.', severity: 'error' });
-          // Do NOT close the dialog here, let the user close it manually
           return;
       }
-
       console.log("[handleManageEnrollment] SUCCESS: Navigating with valid ID:", idToNavigate);
-      // Close dialog *before* navigating
-      setViewCoursesDialogOpen(false); // Close immediately
-      setStudentToView(null); // Clear state immediately
+      setViewCoursesDialogOpen(false);
+      setStudentToView(null);
       navigate(`/enrollmentform?studentId=${idToNavigate}`);
   };
-  // *** END CRITICAL FIX AREA ***
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelected = paginatedRows.map((n) => n.studentId); // IDs are valid here
+      const newSelected = paginatedRows.map((n) => n.studentId);
       setSelected(newSelected);
       return;
     }
@@ -351,7 +324,6 @@ export default function StudentsManagement() {
   };
 
   const handleCheckboxClick = (event, studentId) => {
-    // ID is valid here due to filtering
     const studentIdStr = String(studentId);
     const selectedIndex = selected.findIndex(id => String(id) === studentIdStr);
     let newSelected = [];
@@ -365,7 +337,6 @@ export default function StudentsManagement() {
   };
 
   const isSelected = (studentId) => {
-      // ID is valid here due to filtering
       return selected.some(id => String(id) === String(studentId));
   }
 
@@ -373,7 +344,6 @@ export default function StudentsManagement() {
       setIsLoading(true);
       try {
           const studentsToDeleteIds = new Set(selected.map(String));
-          // Use the current state 'students' which is already pre-filtered
           const updatedStudents = students.filter(s => !studentsToDeleteIds.has(String(s.studentId)));
           const currentSubmissions = safeJsonParse(SUBMISSIONS_STORAGE_KEY);
           const updatedSubmissions = currentSubmissions.filter(sub => !studentsToDeleteIds.has(String(sub?.studentId)));
@@ -416,28 +386,30 @@ export default function StudentsManagement() {
     <Container maxWidth="lg" sx={{ py: 3 }}>
 
       <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
-        <Link component={RouterLink} underline="hover" sx={{ display: 'flex', alignItems: 'center', color: colors.secondaryGrey }} to="/"> <HomeIcon sx={{ mr: 0.5, color: colors.iconContrastDark }} fontSize="inherit" /> Home </Link>
-        <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', color: colors.textDark }}>
+        <Link component={RouterLink} underline="hover" sx={{ display: 'flex', alignItems: 'center' }} color="inherit" to="/"> <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" /> Home </Link>
+        <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
           Students Management
         </Typography>
       </Breadcrumbs>
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Box>
-              <Typography variant="h4" component="h1" fontWeight="600" sx={{ color: colors.textDark }}> Students Management </Typography>
-              <Typography variant="body1" sx={{ color: colors.secondaryGrey }}>
+              <Typography variant="h4" component="h1" fontWeight="600"> Students Management </Typography>
+              <Typography variant="body1" color="text.secondary">
                 View, add, edit, and manage student information and enrollments.
               </Typography>
           </Box>
           <Button
             variant="contained"
-            startIcon={<PersonAddIcon sx={{ color: colors.iconContrastLight }} />}
+            startIcon={<PersonAddIcon />}
             onClick={handleAddStudent}
             size="large"
             sx={{
-                backgroundColor: colors.primaryGreen,
-                color: colors.iconContrastLight,
-                '&:hover': { backgroundColor: colors.greenDark }
+              backgroundColor: '#bed630', // colors.green
+              color: '#000000',       // colors.text
+              '&:hover': {
+                backgroundColor: '#a7bc2a' // colors.greenDark
+              }
             }}
           >
             Add New Student
@@ -446,29 +418,29 @@ export default function StudentsManagement() {
 
        <Grid container spacing={2} sx={{ mb: 3 }}>
          <Grid item xs={12} sm={4} md={4}>
-             <Card sx={{ height: '100%', display: 'flex', alignItems: 'center', p: 1, backgroundColor: colors.white }}>
-                 <GroupIcon sx={{ fontSize: 40, mr: 1.5, ml: 0.5, color: colors.primaryGreen }} />
+             <Card sx={{ height: '100%', display: 'flex', alignItems: 'center', p: 1 }}>
+                 <GroupIcon sx={{ fontSize: 40, mr: 1.5, ml: 0.5, color: 'action.active' }} />
                  <CardContent sx={{p: '8px !important'}}>
-                     <Typography variant="h6" sx={{ color: colors.textDark }}>{isLoading ? <CircularProgress size={20} sx={{ color: colors.primaryGreen }}/> : stats.total}</Typography>
-                     <Typography variant="body2" sx={{ color: colors.secondaryGrey }}>Total Students</Typography>
+                     <Typography variant="h6">{isLoading ? <CircularProgress size={20} color="primary"/> : stats.total}</Typography>
+                     <Typography variant="body2" color="text.secondary">Total Students</Typography>
                  </CardContent>
              </Card>
          </Grid>
          <Grid item xs={12} sm={4} md={4}>
-             <Card sx={{ height: '100%', display: 'flex', alignItems: 'center', p: 1, backgroundColor: colors.white }}>
-                 <SchoolIcon sx={{ fontSize: 40, mr: 1.5, ml: 0.5, color: colors.primaryGreen }} />
+             <Card sx={{ height: '100%', display: 'flex', alignItems: 'center', p: 1 }}>
+                 <SchoolIcon sx={{ fontSize: 40, mr: 1.5, ml: 0.5, color: 'action.active' }} />
                  <CardContent sx={{p: '8px !important'}}>
-                     <Typography variant="h6" sx={{ color: colors.textDark }}>{isLoading ? <CircularProgress size={20} sx={{ color: colors.primaryGreen }}/> : stats.enrolled}</Typography>
-                     <Typography variant="body2" sx={{ color: colors.secondaryGrey }}>Enrolled in Courses</Typography>
+                     <Typography variant="h6">{isLoading ? <CircularProgress size={20} color="primary"/> : stats.enrolled}</Typography>
+                     <Typography variant="body2" color="text.secondary">Enrolled in Courses</Typography>
                  </CardContent>
              </Card>
          </Grid>
          <Grid item xs={12} sm={4} md={4}>
-             <Card sx={{ height: '100%', display: 'flex', alignItems: 'center', p: 1, backgroundColor: colors.white }}>
-                 <NoAccountsIcon sx={{ fontSize: 40, mr: 1.5, ml: 0.5, color: colors.secondaryGrey }} />
+             <Card sx={{ height: '100%', display: 'flex', alignItems: 'center', p: 1 }}>
+                 <NoAccountsIcon sx={{ fontSize: 40, mr: 1.5, ml: 0.5, color: 'action.active' }} />
                  <CardContent sx={{p: '8px !important'}}>
-                     <Typography variant="h6" sx={{ color: colors.textDark }}>{isLoading ? <CircularProgress size={20} sx={{ color: colors.secondaryGrey }}/> : stats.notEnrolled}</Typography>
-                     <Typography variant="body2" sx={{ color: colors.secondaryGrey }}>Not Enrolled</Typography>
+                     <Typography variant="h6">{isLoading ? <CircularProgress size={20} color="primary"/> : stats.notEnrolled}</Typography>
+                     <Typography variant="body2" color="text.secondary">Not Enrolled</Typography>
                  </CardContent>
              </Card>
          </Grid>
@@ -478,12 +450,11 @@ export default function StudentsManagement() {
          <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm={5} md={4}>
             <FormControl fullWidth size="small">
-              <InputLabel sx={{ color: colors.secondaryGrey }}>Filter by Course</InputLabel>
+              <InputLabel>Filter by Course</InputLabel>
               <Select
                 value={selectedCourseFilter}
                 label="Filter by Course"
                 onChange={handleCourseFilterChange}
-                sx={{ color: colors.textDark, '.MuiOutlinedInput-notchedOutline': { borderColor: alpha(colors.secondaryGrey, 0.4) }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.secondaryGrey }, '.MuiSvgIcon-root': { color: colors.secondaryGrey } }}
               >
                 <MenuItem value=""><em>All Courses</em></MenuItem>
                 {courses
@@ -497,30 +468,30 @@ export default function StudentsManagement() {
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={4} md={4}>
-             <TextField fullWidth size="small" variant="outlined" placeholder="Search by name or ID..." value={searchTerm} onChange={handleSearchChange} InputProps={{ startAdornment: ( <InputAdornment position="start"> <SearchIcon fontSize="small" sx={{ color: colors.secondaryGrey }} /> </InputAdornment> ), }} sx={{ input: { color: colors.textDark }, '.MuiOutlinedInput-notchedOutline': { borderColor: alpha(colors.secondaryGrey, 0.4) }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.secondaryGrey } }} />
+             <TextField fullWidth size="small" variant="outlined" placeholder="Search by name or ID..." value={searchTerm} onChange={handleSearchChange} slotProps={{ startAdornment: ( <InputAdornment position="start"> <SearchIcon fontSize="small" /> </InputAdornment> ), }} />
           </Grid>
           <Grid item xs={12} sm={3} md={4}>
-             <Button fullWidth variant="outlined" size="medium" onClick={handleClearFilters} disabled={!selectedCourseFilter && !searchTerm} startIcon={<ClearIcon />} sx={{ color: colors.secondaryGrey, borderColor: alpha(colors.secondaryGrey, 0.5), '&:hover': { borderColor: colors.secondaryGrey, backgroundColor: alpha(colors.secondaryGrey, 0.05) } }}>
+             <Button fullWidth variant="outlined" size="medium" onClick={handleClearFilters} disabled={!selectedCourseFilter && !searchTerm} startIcon={<ClearIcon />}>
                 Clear Filters
              </Button>
           </Grid>
         </Grid>
       </Paper>
 
-      <Paper elevation={3} sx={{ overflow: 'hidden', backgroundColor: colors.white }}>
+      <Paper elevation={3} sx={{ overflow: 'hidden' }}>
         {numSelected > 0 && (
             <Toolbar
               sx={{
                 pl: { sm: 2 },
                 pr: { xs: 1, sm: 1 },
-                bgcolor: colors.selectedRowBg,
+                bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
               }}
             >
-              <Typography sx={{ flex: '1 1 100%', color: colors.textDark }} variant="subtitle1" component="div">
+              <Typography sx={{ flex: '1 1 100%' }} color="inherit" variant="subtitle1" component="div">
                 {numSelected} selected
               </Typography>
               <Tooltip title="Delete Selected">
-                <IconButton onClick={handleDeleteSelected} sx={{ color: colors.errorRed }}>
+                <IconButton onClick={handleDeleteSelected} color="error">
                   <DeleteIcon />
                 </IconButton>
               </Tooltip>
@@ -530,14 +501,14 @@ export default function StudentsManagement() {
         <TableContainer sx={{ maxHeight: 600 }}>
           <Table stickyHeader size="medium" aria-label="students table">
             <TableHead>
-              <TableRow sx={{ '& th': { backgroundColor: colors.backgroundGrey, color: colors.textDark, fontWeight: 600 } }}>
+              <TableRow sx={{ '& th': { backgroundColor: colors.headerBackground, color: colors.headerText, fontWeight: 600 } }}>
                  <TableCell padding="checkbox">
                     <Checkbox
                         indeterminate={onSelectAllIndeterminate}
                         checked={onSelectAllChecked}
                         onChange={handleSelectAllClick}
-                        inputProps={{ 'aria-label': 'select all students on this page' }}
-                        sx={{ color: colors.secondaryGrey, '&.Mui-checked': { color: colors.primaryGreen }, '&.MuiCheckbox-indeterminate': { color: colors.primaryGreen } }}
+                        slotProps={{ 'aria-label': 'select all students on this page' }}
+                        color="primary"
                     />
                  </TableCell>
                  {headCells.map((headCell) => (
@@ -547,7 +518,7 @@ export default function StudentsManagement() {
                         active={orderBy === headCell.id}
                         direction={orderBy === headCell.id ? order : 'asc'}
                         onClick={() => handleRequestSort(headCell.id)}
-                        sx={{ '&.MuiTableSortLabel-active': { color: colors.textDark }, '& .MuiTableSortLabel-icon': { color: `${colors.iconContrastDark} !important` } }}
+                        sx={{ '&.MuiTableSortLabel-active': { color: colors.headerText }, '& .MuiTableSortLabel-icon': { color: `${colors.headerText} !important` } }}
                       >
                         {headCell.label}
                         {orderBy === headCell.id ? (<Box component="span" sx={visuallyHidden}>{order === 'desc' ? 'sorted descending' : 'sorted ascending'}</Box>) : null}
@@ -559,14 +530,13 @@ export default function StudentsManagement() {
             </TableHead>
             <TableBody>
               {isLoading && !numSelected ? (
-                 <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 5 }}><CircularProgress sx={{ color: colors.primaryGreen }}/></TableCell></TableRow>
+                 <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 5 }}><CircularProgress color="primary"/></TableCell></TableRow>
               ) : error ? (
-                 <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 5 }}><Typography sx={{ color: colors.errorRed }}>{error}</Typography></TableCell></TableRow>
+                 <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 5 }}><Typography color="error">{error}</Typography></TableCell></TableRow>
               ) : paginatedRows.length === 0 ? (
-                 <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 5 }}><Typography sx={{ color: colors.secondaryGrey }}>No students found matching the criteria.</Typography></TableCell></TableRow>
+                 <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 5 }}><Typography color="text.secondary">No students found matching the criteria.</Typography></TableCell></TableRow>
               ) : (
                 paginatedRows.map((student) => {
-                    // ID is guaranteed valid here
                     const studentIdStr = String(student.studentId);
                     const isEditing = String(editingStudentId) === studentIdStr;
                     const studentSelected = isSelected(student.studentId);
@@ -582,19 +552,18 @@ export default function StudentsManagement() {
                             selected={studentSelected || isEditing}
                             sx={{
                                 '&.Mui-selected': {
-                                    bgcolor: colors.selectedRowBg,
-                                    '&:hover': { bgcolor: alpha(colors.selectedRowBg, 0.7) } // Corrected alpha
+                                    bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity),
+                                    '&:hover': { bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity + theme.palette.action.hoverOpacity) }
                                 },
-                                '& td': { color: colors.textDark }
                             }}
                         >
                           <TableCell padding="checkbox">
                               <Checkbox
                                   checked={studentSelected}
                                   onChange={(event) => handleCheckboxClick(event, student.studentId)}
-                                  inputProps={{ 'aria-labelledby': `student-checkbox-${studentIdStr}` }}
+                                  slotProps={{ 'aria-labelledby': `student-checkbox-${studentIdStr}` }}
                                   disabled={isEditing}
-                                  sx={{ color: colors.secondaryGrey, '&.Mui-checked': { color: colors.primaryGreen } }}
+                                  color="primary"
                               />
                           </TableCell>
                           <TableCell>
@@ -612,12 +581,12 @@ export default function StudentsManagement() {
                             {isEditing ? (
                                 <>
                                     <Tooltip title="Save Changes (Enter)">
-                                      <IconButton size="small" onClick={handleSaveEdit} sx={{ color: colors.primaryGreen }} >
+                                      <IconButton size="small" onClick={handleSaveEdit} color="primary" >
                                         <SaveIcon fontSize="inherit" />
                                       </IconButton>
                                     </Tooltip>
                                     <Tooltip title="Cancel Edit (Esc)">
-                                      <IconButton size="small" onClick={handleCancelEdit} sx={{ color: colors.secondaryGrey }}>
+                                      <IconButton size="small" onClick={handleCancelEdit} color="default">
                                         <CancelIcon fontSize="inherit" />
                                       </IconButton>
                                     </Tooltip>
@@ -626,21 +595,21 @@ export default function StudentsManagement() {
                                 <>
                                     <Tooltip title="Edit Student Details">
                                       <span>
-                                        <IconButton size="small" onClick={() => handleStartEdit(student)} sx={{ color: colors.secondaryGrey }} disabled={numSelected > 0}>
+                                        <IconButton size="small" onClick={() => handleStartEdit(student)} color="primary" disabled={numSelected > 0}>
                                             <EditIcon fontSize="inherit" />
                                         </IconButton>
                                       </span>
                                     </Tooltip>
                                     <Tooltip title="View Enrolled Courses">
                                        <span>
-                                        <IconButton size="small" onClick={() => handleOpenViewCoursesDialog(student)} sx={{ color: colors.primaryGreen }} disabled={numSelected > 0}>
+                                        <IconButton size="small" onClick={() => handleOpenViewCoursesDialog(student)} color="info" disabled={numSelected > 0}>
                                             <VisibilityIcon fontSize="inherit" />
                                         </IconButton>
                                        </span>
                                     </Tooltip>
                                     <Tooltip title="Remove Student">
                                        <span>
-                                        <IconButton size="small" onClick={() => handleOpenDeleteDialog(student)} sx={{ color: colors.errorRed }} disabled={numSelected > 0}>
+                                        <IconButton size="small" onClick={() => handleOpenDeleteDialog(student)} color="error" disabled={numSelected > 0}>
                                             <DeleteIcon fontSize="inherit" />
                                         </IconButton>
                                        </span>
@@ -663,7 +632,6 @@ export default function StudentsManagement() {
             page={page}
             onPageChange={handleChangePage}
             onRowsPerPageChange={handleChangeRowsPerPage}
-            sx={{ color: colors.secondaryGrey }}
         />
       </Paper>
 
@@ -672,19 +640,18 @@ export default function StudentsManagement() {
         onClose={handleCloseDeleteDialog}
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
-        PaperProps={{ sx: { backgroundColor: colors.white } }}
       >
-        <DialogTitle id="alert-dialog-title" sx={{ color: colors.textDark }}>Confirm Deletion</DialogTitle>
+        <DialogTitle id="alert-dialog-title">Confirm Deletion</DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description" sx={{ color: colors.secondaryGrey }}>
+          <DialogContentText id="alert-dialog-description">
             Are you sure you want to remove the student "{getStudentName(studentToDelete).first} {getStudentName(studentToDelete).last}" (ID: {studentToDelete?.studentId})?
             <br/>
-            <Typography variant="caption" sx={{ color: colors.errorRed }}>This will also remove all associated submissions and cannot be undone.</Typography>
+            <Typography variant="caption" color="error">This will also remove all associated submissions and cannot be undone.</Typography>
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDeleteDialog} sx={{ color: colors.secondaryGrey }}>Cancel</Button>
-          <Button onClick={() => handleConfirmDelete(studentToDelete?.studentId)} sx={{ color: colors.errorRed }} autoFocus>
+          <Button onClick={handleCloseDeleteDialog} color="primary">Cancel</Button>
+          <Button onClick={() => handleConfirmDelete(studentToDelete?.studentId)} color="error" autoFocus>
             Remove Student
           </Button>
         </DialogActions>
@@ -696,12 +663,11 @@ export default function StudentsManagement() {
         aria-labelledby="view-courses-dialog-title"
         maxWidth="sm"
         fullWidth
-        PaperProps={{ sx: { backgroundColor: colors.white } }}
       >
-        <DialogTitle id="view-courses-dialog-title" sx={{ color: colors.textDark }}>
+        <DialogTitle id="view-courses-dialog-title">
           Enrolled Courses for {getStudentName(studentToView).first} {getStudentName(studentToView).last}
         </DialogTitle>
-        <DialogContent dividers sx={{ '& .MuiListItemText-primary': { color: colors.textDark }, '& .MuiListItemText-secondary': { color: colors.secondaryGrey } }}>
+        <DialogContent dividers>
           {getEnrolledCourseNames.length > 0 ? (
             <List dense>
               {getEnrolledCourseNames.map((course) => (
@@ -711,24 +677,22 @@ export default function StudentsManagement() {
               ))}
             </List>
           ) : (
-            <Typography variant="body2" align="center" sx={{ py: 2, color: colors.secondaryGrey }}>
+            <Typography variant="body2" align="center" sx={{ py: 2 }}>
               This student is not currently enrolled in any courses.
             </Typography>
           )}
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5 }}>
            <Button
-              // Pass the potentially null/undefined ID from state
               onClick={() => handleManageEnrollment(studentToView?.studentId)}
-              startIcon={<ManageAccountsIcon sx={{ color: colors.primaryGreen }}/>}
+              startIcon={<ManageAccountsIcon />}
               variant="outlined"
-              // Disable if state or ID is invalid
+              color="primary"
               disabled={!studentToView || !isValidId(studentToView.studentId)}
-              sx={{ color: colors.primaryGreen, borderColor: alpha(colors.primaryGreen, 0.5), '&:hover': { borderColor: colors.primaryGreen, backgroundColor: alpha(colors.primaryGreen, 0.05) } }}
             >
               Manage Enrollments
             </Button>
-          <Button onClick={handleCloseViewCoursesDialog} sx={{ color: colors.secondaryGrey }}>Close</Button>
+          <Button onClick={handleCloseViewCoursesDialog} color="primary">Close</Button>
         </DialogActions>
       </Dialog>
 

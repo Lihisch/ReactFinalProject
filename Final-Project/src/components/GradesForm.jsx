@@ -297,7 +297,7 @@ export default function GradesForm() {
                           onChange={(e) => handleGradeChange(studentIdStr, e.target.value)}
                           error={!!errors[studentIdStr]}
                           helperText={errors[studentIdStr]}
-                          inputProps={{ min: 0, max: 100, step: "any" }}
+                          slotProps={{ min: 0, max: 100, step: "any" }}
                           sx={{ width: '150px' }}
                         />
                       </ListItem>

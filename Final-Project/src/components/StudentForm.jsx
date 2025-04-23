@@ -167,7 +167,7 @@ export default function StudentForm() {
                 required
                 error={!!errors.studentId}
                 helperText={errors.studentId}
-                inputProps={{ maxLength: 9 }}
+                slotProps={{ maxLength: 9 }}
             />
           </Grid>
 

@@ -127,7 +127,7 @@ export default function Help() {
             placeholder="Search by topic (e.g., 'grades', 'assignments')..."
             value={searchTerm}
             onChange={handleSearchChange}
-            InputProps={{
+            slotProps ={{
               startAdornment: (
                 <InputAdornment position="start">
                   <SearchIcon />

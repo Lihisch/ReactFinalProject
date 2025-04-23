@@ -68,16 +68,16 @@ const initialAssignments = [
 ];
 
 const initialGrades = [ 
-  { courseId: "N2001", assignmentCode: "001", studentId: "313532939", grade: 75 },  // תואם
-  { courseId: "N2001", assignmentCode: "001", studentId: "449182736", grade: 85 },  // תואם
-  { courseId: "P2402", assignmentCode: "004", studentId: "321654987", grade: 90 },  // תואם
+  { courseId: "B5410", assignmentCode: "001", studentId: "313532939", grade: 75 },  // תואם
+  { courseId: "S0350", assignmentCode: "001", studentId: "449182736", grade: 85 },  // תואם
+  { courseId: "N2001", assignmentCode: "004", studentId: "321654987", grade: 90 },  // תואם
   { courseId: "P2402", assignmentCode: "004", studentId: "345621879", grade: 82 },  // תואם
   { courseId: "S0350", assignmentCode: "006", studentId: "313532939", grade: 85 },  // תואם
   { courseId: "S0350", assignmentCode: "006", studentId: "449182736", grade: 88 },  // תואם
   { courseId: "D1510", assignmentCode: "003", studentId: "024562241", grade: 72 },  // תואם
   { courseId: "D1510", assignmentCode: "003", studentId: "312456789", grade: 55 },  // תואם
   { courseId: "B5410", assignmentCode: "005", studentId: "325874123", grade: 98 },  // תואם
-  { courseId: "P6501", assignmentCode: "007", studentId: "208123456", grade: 75 },
+  { courseId: "I3510", assignmentCode: "007", studentId: "208123456", grade: 75 },
 ];
 
 const initialSubmissions = [

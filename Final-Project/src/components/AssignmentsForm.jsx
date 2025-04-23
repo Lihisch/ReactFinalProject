@@ -348,14 +348,14 @@ export default function AssignmentForm() {
             {/* Row 3: Group Fields */}
             {formData.assignmentType === 'Group' && (
               <>
-                <Grid item xs={12} sm={6}> <TextField fullWidth label="Min Participants" name="minParticipants" type="number" value={formData.minParticipants} onChange={handleChange} required={formData.assignmentType === 'Group'} inputProps={{ min: 1 }} error={!!errors.minParticipants} helperText={errors.minParticipants} /> </Grid>
-                <Grid item xs={12} sm={6}> <TextField fullWidth label="Max Participants" name="maxParticipants" type="number" value={formData.maxParticipants} onChange={handleChange} required={formData.assignmentType === 'Group'} inputProps={{ min: 1 }} error={!!errors.maxParticipants} helperText={errors.maxParticipants} /> </Grid>
+                <Grid item xs={12} sm={6}> <TextField fullWidth label="Min Participants" name="minParticipants" type="number" value={formData.minParticipants} onChange={handleChange} required={formData.assignmentType === 'Group'} slotProps={{ min: 1 }} error={!!errors.minParticipants} helperText={errors.minParticipants} /> </Grid>
+                <Grid item xs={12} sm={6}> <TextField fullWidth label="Max Participants" name="maxParticipants" type="number" value={formData.maxParticipants} onChange={handleChange} required={formData.assignmentType === 'Group'} slotProps={{ min: 1 }} error={!!errors.maxParticipants} helperText={errors.maxParticipants} /> </Grid>
               </>
             )}
 
             {/* Row 4: Date & Weight */}
             <Grid item xs={12} sm={6}> <TextField fullWidth label="Submission Deadline" name="submissionDate" type="date" value={formData.submissionDate} onChange={handleChange} InputLabelProps={{ shrink: true }} required error={!!errors.submissionDate} helperText={errors.submissionDate} /> </Grid>
-            <Grid item xs={12} sm={6}> <TextField fullWidth label="Weight (%)" name="weight" type="number" value={formData.weight} onChange={handleChange} required inputProps={{ min: 0, max: 100, step: "any" }} error={!!errors.weight} helperText={errors.weight} /> </Grid>
+            <Grid item xs={12} sm={6}> <TextField fullWidth label="Weight (%)" name="weight" type="number" value={formData.weight} onChange={handleChange} required slotProps={{ min: 0, max: 100, step: "any" }} error={!!errors.weight} helperText={errors.weight} /> </Grid>
 
             {/* Row 5: Description */}
             <Grid item xs={12}> <TextField fullWidth label="Assignment Description (Optional)" name="description" multiline rows={3} value={formData.description} onChange={handleChange} error={!!errors.description} helperText={errors.description} /> </Grid>
