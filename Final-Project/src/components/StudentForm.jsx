@@ -15,6 +15,7 @@ import {
   Link,
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
+import { addStudent } from '../firebase/students';
 
 // Consistent color palette
 const colors = {
@@ -105,18 +106,18 @@ export default function StudentForm() {
       const existingStudents = JSON.parse(localStorage.getItem('students')) || [];
       existingStudents.push(newStudent);
       localStorage.setItem('students', JSON.stringify(existingStudents));
+      addStudent(newStudent).then(() => {
+        setSnackbar({ open: true, message: 'Student added successfully!', severity: 'success' });
 
-      setSnackbar({ open: true, message: 'Student added successfully!', severity: 'success' });
-
-      setTimeout(() => {
-        setFormData(initialFormData);
-        setErrors({});
-        navigate('/StudentList');
-      }, 1500);
-
+        setTimeout(() => {
+          setFormData(initialFormData);
+          setErrors({});
+          navigate('/StudentList');
+        }, 1500);
+      });
     } catch (err) {
-        console.error("Error saving student:", err);
-        setSnackbar({ open: true, message: 'Error saving student. Please check console.', severity: 'error' });
+      console.error("Error saving student:", err);
+      setSnackbar({ open: true, message: 'Error saving student. Please check console.', severity: 'error' });
     }
   };
 
@@ -136,7 +137,7 @@ export default function StudentForm() {
           <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" /> Home
         </Link>
         <Link component={RouterLink} underline="hover" color="inherit" to="/studentsmanagement">
-        Students Management
+          Students Management
         </Link>
         <Typography color="text.primary">Add New Student</Typography>
       </Breadcrumbs>
@@ -159,41 +160,41 @@ export default function StudentForm() {
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <TextField
-                fullWidth
-                label="Student ID"
-                name="studentId"
-                value={formData.studentId}
-                onChange={handleChange}
-                required
-                error={!!errors.studentId}
-                helperText={errors.studentId}
-                slotProps={{ maxLength: 9 }}
+              fullWidth
+              label="Student ID"
+              name="studentId"
+              value={formData.studentId}
+              onChange={handleChange}
+              required
+              error={!!errors.studentId}
+              helperText={errors.studentId}
+              slotProps={{ maxLength: 9 }}
             />
           </Grid>
 
           <Grid item xs={12} sm={6}>
             <TextField
-                fullWidth
-                label="First Name"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-                error={!!errors.firstName}
-                helperText={errors.firstName}
+              fullWidth
+              label="First Name"
+              name="firstName"
+              value={formData.firstName}
+              onChange={handleChange}
+              required
+              error={!!errors.firstName}
+              helperText={errors.firstName}
             />
           </Grid>
 
           <Grid item xs={12} sm={6}>
             <TextField
-                fullWidth
-                label="Last Name"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-                error={!!errors.lastName}
-                helperText={errors.lastName}
+              fullWidth
+              label="Last Name"
+              name="lastName"
+              value={formData.lastName}
+              onChange={handleChange}
+              required
+              error={!!errors.lastName}
+              helperText={errors.lastName}
             />
           </Grid>
 
