@@ -100,7 +100,6 @@ export default function StudentForm() {
       const newStudent = {
         ...formData,
         enrolledCourses: [],
-        studentName: `${formData.firstName} ${formData.lastName}`
       };
 
       const existingStudents = JSON.parse(localStorage.getItem('students')) || [];
@@ -112,7 +111,7 @@ export default function StudentForm() {
         setTimeout(() => {
           setFormData(initialFormData);
           setErrors({});
-          navigate('/StudentList');
+          navigate('/Studentsmanagement');
         }, 1500);
       });
     } catch (err) {

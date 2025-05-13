@@ -1,4 +1,4 @@
-// src/components/StudentsManagement.jsx
+// c:\Users\ASUS\OneDrive\SCHOOL\שנה ב\סמסטר ב\REACT FINAL PROJECT\ReactFinalProject\Final-Project\src\components\StudentsManagement.jsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
@@ -24,6 +24,8 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import TablePagination from '@mui/material/TablePagination';
+import { listStudents } from '../firebase/students';
+
 
 // Consistent color palette similar to GradesManagement and AssignmentsManagement
 const colors = {
@@ -46,7 +48,7 @@ export default function StudentsManagement() {
 
   const [students, setStudents] = useState([]);
   const [courses, setCourses] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Initialize to true
   const [error, setError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [selectedCourseFilter, setSelectedCourseFilter] = useState('');
@@ -94,26 +96,38 @@ export default function StudentsManagement() {
 
 
   const fetchData = useCallback(() => {
-    setIsLoading(true);
-    setError(null);
     try {
-      const studentsData = safeJsonParse(STUDENTS_STORAGE_KEY);
       const coursesData = safeJsonParse(COURSES_STORAGE_KEY);
-      if (error === null) {
-          setStudents(studentsData);
-          setCourses(coursesData);
-      }
+      setCourses(coursesData);
+      // }
     } catch (err) {
-      console.error("Unexpected error during fetchData:", err);
-      setError("Failed to load student or course data.");
-    } finally {
-      setIsLoading(false);
+      console.error("Error loading courses from localStorage:", err);
+      setError("Failed to load course data from localStorage.");
+      setCourses([]); 
+    } finally {   
     }
-  }, [error]);
+  }, []);
 
   useEffect(() => {
-    fetchData();
+    fetchData(); 
   }, [fetchData]);
+
+  useEffect(() => {
+    setIsLoading(true); 
+    setError(null);     
+    listStudents()
+      .then((Students) => {
+        setStudents(Students);
+      })
+      .catch((err) => {
+        console.error("Error fetching students from Firebase:", err);
+        setError("Failed to load students from Firebase.");
+        setStudents([]); 
+      })
+      .finally(() => {
+        setIsLoading(false); 
+      });
+  }, []); 
 
   useEffect(() => {
     if (Array.isArray(students)) {
@@ -238,7 +252,8 @@ export default function StudentsManagement() {
             ? { ...s, firstName: editFirstName.trim(), lastName: editLastName.trim() }
             : s
         );
-        localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updatedStudents));
+        // TODO: Update student in Firebase here
+        localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updatedStudents)); // Keep for now, or remove if Firebase is sole source
         setStudents(updatedStudents);
         setSnackbar({ open: true, message: 'Student details updated successfully.', severity: 'success' });
         handleCancelEdit();
@@ -265,10 +280,11 @@ export default function StudentsManagement() {
     const studentInfo = students.find(s => String(s.studentId) === idStr);
     const studentDisplayName = studentInfo ? `${studentInfo.firstName || ''} ${studentInfo.lastName || ''}`.trim() : `ID: ${idStr}`;
     try {
+      // TODO: Delete student from Firebase here
       const updatedStudents = students.filter(s => String(s.studentId) !== idStr);
       const currentSubmissions = safeJsonParse(SUBMISSIONS_STORAGE_KEY);
       const updatedSubmissions = currentSubmissions.filter(sub => String(sub?.studentId) !== idStr);
-      localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updatedStudents));
+      localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updatedStudents)); // Keep for now, or remove if Firebase is sole source
       localStorage.setItem(SUBMISSIONS_STORAGE_KEY, JSON.stringify(updatedSubmissions));
       setStudents(updatedStudents);
       setSnackbar({ open: true, message: `Student ${studentDisplayName} and their submissions removed successfully.`, severity: 'success' });
@@ -343,11 +359,12 @@ export default function StudentsManagement() {
   const handleDeleteSelected = () => {
       setIsLoading(true);
       try {
+          // TODO: Delete selected students from Firebase here (batch delete if possible)
           const studentsToDeleteIds = new Set(selected.map(String));
           const updatedStudents = students.filter(s => !studentsToDeleteIds.has(String(s.studentId)));
           const currentSubmissions = safeJsonParse(SUBMISSIONS_STORAGE_KEY);
           const updatedSubmissions = currentSubmissions.filter(sub => !studentsToDeleteIds.has(String(sub?.studentId)));
-          localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updatedStudents));
+          localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updatedStudents)); // Keep for now, or remove if Firebase is sole source
           localStorage.setItem(SUBMISSIONS_STORAGE_KEY, JSON.stringify(updatedSubmissions));
           setStudents(updatedStudents);
           setSnackbar({ open: true, message: `${selected.length} student(s) and their submissions removed successfully.`, severity: 'success' });
@@ -529,7 +546,7 @@ export default function StudentsManagement() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {isLoading && !numSelected ? (
+              {isLoading && !numSelected ? ( // Show loading only if not in selection mode
                  <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 5 }}><CircularProgress color="primary"/></TableCell></TableRow>
               ) : error ? (
                  <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 5 }}><Typography color="error">{error}</Typography></TableCell></TableRow>
