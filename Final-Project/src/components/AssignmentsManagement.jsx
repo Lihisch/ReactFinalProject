@@ -28,7 +28,7 @@ import { format, isPast, parseISO, isValid } from 'date-fns';
 
 // Simplified color palette, similar to GradesManagement
 const colors = {
-  headerBackground: '#e0e0e0', // Light grey for table header
+  headerBackground: '#e0e0e0', // Light gry for table header
   headerText: '#000000',       // Black text for table header
   filterBarBg: '#fafafa',       // Very light grey for filter area
   white: '#ffffff',
