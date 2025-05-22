@@ -1,4 +1,4 @@
-import { addDoc, collection, getDocs } from "firebase/firestore"
+import { addDoc, collection, getDocs, doc, updateDoc } from "firebase/firestore"
 import { firestore } from "./firebase-settings"
 
 export async function addStudent(student) {
@@ -10,4 +10,9 @@ export async function listStudents() {
    
     return snapshot.docs.map((doc) =>
         ({ ...doc.data(), id: doc.id }));
-        }
+}
+
+export async function updateStudent(studentId, updatedData) {
+    const studentRef = doc(firestore, "students", studentId);
+    return updateDoc(studentRef, updatedData);
+}

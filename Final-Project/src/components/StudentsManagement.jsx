@@ -24,7 +24,8 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import TablePagination from '@mui/material/TablePagination';
-import { listStudents } from '../firebase/students';
+import { listStudents, updateStudent } from '../firebase/students';
+import { listCourses } from '../firebase/courses';
 
 
 // Consistent color palette similar to GradesManagement and AssignmentsManagement
@@ -95,16 +96,14 @@ export default function StudentsManagement() {
   };
 
 
-  const fetchData = useCallback(() => {
+  const fetchData = useCallback(async () => {
     try {
-      const coursesData = safeJsonParse(COURSES_STORAGE_KEY);
+      const coursesData = await listCourses();
       setCourses(coursesData);
-      // }
     } catch (err) {
-      console.error("Error loading courses from localStorage:", err);
-      setError("Failed to load course data from localStorage.");
+      console.error("Error loading courses from Firebase:", err);
+      setError("Failed to load course data from Firebase.");
       setCourses([]); 
-    } finally {   
     }
   }, []);
 
@@ -239,7 +238,7 @@ export default function StudentsManagement() {
     setEditLastName('');
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!isValidId(editingStudentId)) return;
     if (!editFirstName.trim() || !editLastName.trim()) {
         setSnackbar({ open: true, message: 'First and Last names cannot be empty.', severity: 'error' });
@@ -247,19 +246,32 @@ export default function StudentsManagement() {
     }
     try {
         const editingIdStr = String(editingStudentId);
+        const updatedData = {
+            firstName: editFirstName.trim(),
+            lastName: editLastName.trim()
+        };
+        
+        // Find the student document ID from the students array
+        const studentToUpdate = students.find(s => String(s.studentId) === editingIdStr);
+        if (!studentToUpdate || !studentToUpdate.id) {
+            throw new Error('Student document ID not found');
+        }
+        
+        // Update in Firebase using the document ID
+        await updateStudent(studentToUpdate.id, updatedData);
+        
+        // Update local state
         const updatedStudents = students.map(s =>
             String(s.studentId) === editingIdStr
-            ? { ...s, firstName: editFirstName.trim(), lastName: editLastName.trim() }
+            ? { ...s, ...updatedData }
             : s
         );
-        // TODO: Update student in Firebase here
-        localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updatedStudents)); // Keep for now, or remove if Firebase is sole source
         setStudents(updatedStudents);
         setSnackbar({ open: true, message: 'Student details updated successfully.', severity: 'success' });
         handleCancelEdit();
     } catch (saveError) {
         console.error("Error saving student details:", saveError);
-        setSnackbar({ open: true, message: 'Failed to update student details.', severity: 'error' });
+        setSnackbar({ open: true, message: 'Failed to update student details: ' + (saveError.message || 'Unknown error'), severity: 'error' });
     }
   };
 
@@ -310,9 +322,19 @@ export default function StudentsManagement() {
 
    const getEnrolledCourseNames = useMemo(() => {
     if (!studentToView || !isValidId(studentToView.studentId) || !Array.isArray(studentToView.enrolledCourses) || !courses.length) return [];
-    const courseMap = new Map(courses.map(c => [String(c?.courseId), c?.courseName]));
+    
+    const courseMap = new Map(courses.map(c => [String(c?.courseId), {
+      id: String(c?.courseId),
+      name: c?.courseName || 'Unnamed Course',
+      professor: c?.professorsName || 'Unknown Professor',
+      schedule: `${c?.dayOfWeek || 'N/A'} ${c?.startTime || 'N/A'}-${c?.endTime || 'N/A'}`
+    }]));
+
     return studentToView.enrolledCourses
-      .map(id => ({ id: String(id), name: courseMap.get(String(id)) || `Unknown Course (ID: ${id})` }))
+      .map(id => {
+        const courseInfo = courseMap.get(String(id));
+        return courseInfo || { id: String(id), name: `Unknown Course (ID: ${id})` };
+      })
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [studentToView, courses]);
 
@@ -689,7 +711,26 @@ export default function StudentsManagement() {
             <List dense>
               {getEnrolledCourseNames.map((course) => (
                 <ListItem key={course.id}>
-                  <ListItemText primary={course.name} secondary={`ID: ${course.id}`} />
+                  <ListItemText 
+                    primary={course.name} 
+                    secondary={
+                      <>
+                        <Typography component="span" variant="body2" color="text.primary">
+                          ID: {course.id}
+                        </Typography>
+                        {course.professor && (
+                          <Typography component="span" variant="body2" display="block">
+                            Professor: {course.professor}
+                          </Typography>
+                        )}
+                        {course.schedule && (
+                          <Typography component="span" variant="body2" display="block">
+                            Schedule: {course.schedule}
+                          </Typography>
+                        )}
+                      </>
+                    }
+                  />
                 </ListItem>
               ))}
             </List>

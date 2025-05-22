@@ -41,7 +41,7 @@ export default function StudentForm() {
   const validate = () => {
     const temp = {};
     const alphaRegex = /^[A-Za-z]+$/;
-    const numericRegex = /^[0-9]+$/;
+    const numericRegex = /^[0-9]+מ$/;
 
     // Student ID Validation
     if (!formData.studentId) {

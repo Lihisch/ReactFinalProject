@@ -24,7 +24,11 @@ import GradingIcon from '@mui/icons-material/Grading';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { format, isPast, parseISO, isValid } from 'date-fns';
+import { listAssignments, deleteAssignment } from '../firebase/assignments';
+import { listStudents } from '../firebase/students';
+import { listCourses } from '../firebase/courses';
 
 // Simplified color palette, similar to GradesManagement
 const colors = {
@@ -39,11 +43,39 @@ const colors = {
   // instead of custom hex codes for buttons and chips where appropriate.
 };
 
-
 const ASSIGNMENTS_STORAGE_KEY = 'assignments';
 const COURSES_STORAGE_KEY = 'courses';
 const STUDENTS_STORAGE_KEY = 'students';
 const SUBMISSIONS_STORAGE_KEY = 'submissions';
+
+const getAssignmentStatus = (submissionDateStr) => {
+  if (!submissionDateStr) return 'Unknown';
+  try {
+    if (typeof submissionDateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(submissionDateStr)) {
+        return 'Invalid Date';
+    }
+    const deadline = parseISO(`${submissionDateStr}T23:59:59`);
+    if (!isValid(deadline)) {
+        return 'Invalid Date';
+    }
+    return isPast(deadline) ? 'Past Due' : 'Active';
+  } catch (e) {
+      console.error("Error in getAssignmentStatus:", e);
+      return 'Invalid Date';
+  }
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr || typeof dateStr !== 'string') return 'N/A';
+  try {
+    const date = parseISO(dateStr);
+    if (!isValid(date)) return 'Invalid Date';
+    return format(date, 'MMM dd, yyyy');
+  } catch (e) {
+      console.error("Error in formatDate:", e);
+      return 'Invalid Date';
+  }
+};
 
 // --- Sorting Helper Functions ---
 function descendingComparator(a, b, orderBy) {
@@ -57,10 +89,20 @@ function descendingComparator(a, b, orderBy) {
     }
     if (bValue < aValue) return -1; if (bValue > aValue) return 1; return 0;
 }
-function getComparator(order, orderBy) { return order === 'desc' ? (a, b) => descendingComparator(a, b, orderBy) : (a, b) => -descendingComparator(a, b, orderBy); }
+
+function getComparator(order, orderBy) { 
+    return order === 'desc' ? 
+        (a, b) => descendingComparator(a, b, orderBy) : 
+        (a, b) => -descendingComparator(a, b, orderBy); 
+}
+
 function stableSort(array, comparator) {
     const stabilizedThis = array.map((el, index) => [el, index]);
-    stabilizedThis.sort((a, b) => { const order = comparator(a[0], b[0]); if (order !== 0) return order; return a[1] - b[1]; });
+    stabilizedThis.sort((a, b) => { 
+        const order = comparator(a[0], b[0]); 
+        if (order !== 0) return order; 
+        return a[1] - b[1]; 
+    });
     return stabilizedThis.map((el) => el[0]);
 }
 // --- End Sorting Helpers ---
@@ -81,6 +123,8 @@ export default function AssignmentsManagement() {
   const [order, setOrder] = useState('asc');
   const [orderBy, setOrderBy] = useState('assignmentCode');
   const [stats, setStats] = useState({ total: 0, active: 0, pastDue: 0 });
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const safeJsonParse = (key, defaultValue = []) => {
     try {
@@ -97,115 +141,129 @@ export default function AssignmentsManagement() {
     }
   };
 
-  const getAssignmentStatus = (submissionDateStr) => {
-    if (!submissionDateStr) return 'Unknown';
-    try {
-      if (typeof submissionDateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(submissionDateStr)) {
-          return 'Invalid Date';
-      }
-      const deadline = parseISO(`${submissionDateStr}T23:59:59`);
-      if (!isValid(deadline)) {
-          return 'Invalid Date';
-      }
-      return isPast(deadline) ? 'Past Due' : 'Active';
-    } catch (e) {
-        console.error("Error in getAssignmentStatus:", e);
-        return 'Invalid Date';
-    }
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        console.log('Starting to fetch data from Firebase...');
+        const [assignmentsData, coursesData] = await Promise.all([
+          listAssignments(),
+          listCourses()
+        ]);
 
-  const formatDate = (dateStr) => {
-    if (!dateStr || typeof dateStr !== 'string') return 'N/A';
-    try {
-      const date = parseISO(dateStr);
-      if (!isValid(date)) return 'Invalid Date';
-      return format(date, 'MMM dd, yyyy');
-    } catch (e) {
-        console.error("Error in formatDate:", e);
-        return 'Invalid Date';
-    }
-  };
+        console.log('Raw assignments data:', assignmentsData);
+        console.log('Raw courses data:', coursesData);
 
-  const fetchInitialData = useCallback(() => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const parsedAssignments = safeJsonParse(ASSIGNMENTS_STORAGE_KEY).filter(assign => assign && assign.assignmentCode);
-      const parsedCourses = safeJsonParse(COURSES_STORAGE_KEY);
-      const allStudents = safeJsonParse(STUDENTS_STORAGE_KEY);
-      const allSubmissions = safeJsonParse(SUBMISSIONS_STORAGE_KEY);
-
-      const submissionMapByAssignment = new Map();
-      allSubmissions.forEach(sub => {
-        if (sub && sub.assignmentCode && sub.studentId) {
-          if (!submissionMapByAssignment.has(sub.assignmentCode)) { submissionMapByAssignment.set(sub.assignmentCode, new Map()); }
-          submissionMapByAssignment.get(sub.assignmentCode).set(sub.studentId, sub.submitted);
+        if (!Array.isArray(assignmentsData)) {
+          throw new Error('Invalid assignments data received');
         }
-      });
 
-      let activeCount = 0, pastDueCount = 0;
-      const enhancedAssignments = parsedAssignments.map((assign) => {
-        const status = getAssignmentStatus(assign.submissionDate);
-        if (status === 'Active') activeCount++;
-        if (status === 'Past Due') pastDueCount++;
+        // Process assignments to calculate stats
+        const activeCount = assignmentsData.filter(a => {
+          try {
+            const dueDate = parseISO(a.dueDate);
+            return isValid(dueDate) && !isPast(dueDate);
+          } catch (error) {
+            console.warn('Invalid due date for assignment:', a);
+            return false;
+          }
+        }).length;
 
-        const courseIdentifier = assign.courseId || assign.courseCode;
-        const assignmentCourseIdString = courseIdentifier ? String(courseIdentifier).trim() : null;
+        const pastDueCount = assignmentsData.filter(a => {
+          try {
+            const dueDate = parseISO(a.dueDate);
+            return isValid(dueDate) && isPast(dueDate);
+          } catch (error) {
+            console.warn('Invalid due date for assignment:', a);
+            return false;
+          }
+        }).length;
 
-        let enrolledCount = 0, submittedCount = 0;
-        if (assignmentCourseIdString) {
-          const assignmentSubmissions = submissionMapByAssignment.get(assign.assignmentCode) || new Map();
+        // Update assignments with additional data
+        const enhancedAssignments = assignmentsData.map(assignment => {
+          console.log('Processing assignment:', assignment);
+          const course = coursesData.find(c => c.courseId === assignment.courseId);
+          console.log('Found course:', course);
 
-          allStudents.forEach(student => {
-            if (student && student.studentId && Array.isArray(student.enrolledCourses)) {
-              if (student.enrolledCourses.some(id => id != null && String(id).trim() === assignmentCourseIdString)) {
-                enrolledCount++;
-                if (assignmentSubmissions.get(student.studentId)) {
-                  submittedCount++;
-                }
-              }
-            }
-          });
-        }
-        return { ...assign, courseIdentifier, status, enrolledCount, submittedCount };
-      });
+          return {
+            ...assignment,
+            courseName: course ? course.courseName : 'Unknown Course',
+            assignmentCode: assignment.assignmentId,
+            assignmentName: assignment.assignmentName,
+            submissionDate: assignment.dueDate,
+            weight: assignment.weight || 0,
+            assignmentType: assignment.assignmentType || 'Individual',
+            minParticipants: assignment.minParticipants || '',
+            maxParticipants: assignment.maxParticipants || '',
+            description: assignment.description || '',
+            fileName: assignment.fileName || ''
+          };
+        });
 
-      setAssignments(enhancedAssignments);
-      setCourseOptions(parsedCourses);
-      setStats({ total: parsedAssignments.length, active: activeCount, pastDue: pastDueCount });
+        console.log('Final enhanced assignments:', enhancedAssignments);
 
-    } catch (err) {
-      console.error("[FetchData] CRITICAL ERROR during initial data processing:", err);
-      setError("Failed to load or process data. Check console.");
-      setAssignments([]); setCourseOptions([]); setStats({ total: 0, active: 0, pastDue: 0 });
-    } finally {
-      setIsLoading(false);
-    }
+        setAssignments(enhancedAssignments);
+        setCourseOptions(coursesData);
+        setStats({
+          total: assignmentsData.length,
+          active: activeCount,
+          pastDue: pastDueCount
+        });
+      } catch (error) {
+        console.error("Error loading data:", error);
+        setError(error.message || "Failed to load data. Please try again.");
+        setSnackbar({ 
+          open: true, 
+          message: `Error loading data: ${error.message}`, 
+          severity: 'error' 
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
-
-  useEffect(() => { fetchInitialData(); }, [fetchInitialData]);
 
   const processedAssignments = useMemo(() => {
     if (!Array.isArray(assignments)) {
+        console.log('Assignments is not an array:', assignments);
         return [];
     }
     try {
+        console.log('Processing assignments:', assignments);
         let processed = [...assignments];
-        processed = processed.filter(assign => {
-            if (!assign || !assign.assignmentCode) return false;
-            const courseMatch = !courseFilter || (assign.courseIdentifier != null && String(assign.courseIdentifier) === String(courseFilter));
-            const statusMatch = !statusFilter || assign.status === statusFilter;
-            return courseMatch && statusMatch;
-        });
+        
+        // Filter by course
+        if (courseFilter) {
+            processed = processed.filter(assign => 
+                assign && assign.courseId && String(assign.courseId).trim() === String(courseFilter).trim()
+            );
+        }
+        
+        // Filter by status
+        if (statusFilter) {
+            processed = processed.filter(assign => 
+                assign && getAssignmentStatus(assign.submissionDate) === statusFilter
+            );
+        }
+        
+        // Filter by search term
         if (searchTerm) {
             const lowerSearchTerm = searchTerm.toLowerCase();
             processed = processed.filter(assign =>
-                (assign.assignmentName && assign.assignmentName.toLowerCase().includes(lowerSearchTerm)) ||
-                (assign.assignmentCode && assign.assignmentCode.toLowerCase().includes(lowerSearchTerm)) ||
-                (assign.courseIdentifier && String(assign.courseIdentifier).toLowerCase().includes(lowerSearchTerm))
+                assign && (
+                    (assign.assignmentName && assign.assignmentName.toLowerCase().includes(lowerSearchTerm)) ||
+                    (assign.assignmentCode && assign.assignmentCode.toLowerCase().includes(lowerSearchTerm)) ||
+                    (assign.courseId && String(assign.courseId).toLowerCase().includes(lowerSearchTerm))
+                )
             );
         }
+        
+        // Sort the results
         processed = stableSort(processed, getComparator(order, orderBy));
+        console.log('Processed assignments:', processed);
         return processed;
     } catch (sortError) {
         console.error("Error during sorting/filtering:", sortError);
@@ -215,23 +273,37 @@ export default function AssignmentsManagement() {
   }, [assignments, courseFilter, statusFilter, searchTerm, order, orderBy]);
 
   const handleAddAssignment = () => { navigate('/assignmentsform'); };
-  const handleEditAssignment = (assignmentCode) => { navigate(`/assignmentsform/${assignmentCode}`); };
+  const handleEditAssignment = (assignmentCode) => {
+    if (!assignmentCode) {
+      setSnackbar({ open: true, message: 'Invalid assignment code', severity: 'error' });
+      return;
+    }
+    console.log('Navigating to edit assignment:', assignmentCode);
+    // Navigate to the edit form with the correct code
+    navigate(`/assignmentsform/${assignmentCode}`);
+  };
   const handleOpenDeleteDialog = (assignmentCode, assignmentName) => { setConfirmDelete({ open: true, assignmentCode, assignmentName }); };
   const handleCloseDeleteDialog = () => { setConfirmDelete({ open: false, assignmentCode: null, assignmentName: '' }); };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!confirmDelete.assignmentCode) return;
     try {
-      const currentAssignments = safeJsonParse(ASSIGNMENTS_STORAGE_KEY);
-      const updatedAssignments = currentAssignments.filter(a => a && a.assignmentCode && a.assignmentCode !== confirmDelete.assignmentCode);
-      localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(updatedAssignments || []));
-      fetchInitialData();
-      setSnackbar({ open: true, message: `Assignment '${confirmDelete.assignmentName}' deleted successfully.`, severity: 'success' });
-    } catch (err) {
-      console.error("Error deleting assignment:", err);
-      setSnackbar({ open: true, message: 'Error deleting assignment.', severity: 'error' });
-    }
-    finally {
+      await deleteAssignment(confirmDelete.assignmentCode);
+      setSnackbar({ 
+        open: true, 
+        message: `Assignment '${confirmDelete.assignmentName}' deleted successfully.`, 
+        severity: 'success' 
+      });
+      // Refresh data after deletion
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting assignment:", error);
+      setSnackbar({ 
+        open: true, 
+        message: 'Error deleting assignment.', 
+        severity: 'error' 
+      });
+    } finally {
       handleCloseDeleteDialog();
     }
   };
@@ -251,13 +323,13 @@ export default function AssignmentsManagement() {
 
     setTimeout(() => {
         const assignment = assignments.find(a => a.assignmentCode === assignmentCode);
-        if (!assignment || !assignment.courseIdentifier) {
+        if (!assignment || !assignment.courseId) {
             setSnackbar({ open: true, message: 'Error: Assignment details or Course ID missing.', severity: 'error' });
             setSubmissionsView(prev => ({ ...prev, loading: false, open: false }));
             return;
         }
 
-        const assignmentCourseIdString = String(assignment.courseIdentifier).trim();
+        const assignmentCourseIdString = String(assignment.courseId).trim();
 
         try {
             const allStudents = safeJsonParse(STUDENTS_STORAGE_KEY);
@@ -302,7 +374,11 @@ export default function AssignmentsManagement() {
   const handleCourseFilterChange = (event) => { setCourseFilter(event.target.value); };
   const handleStatusFilterChange = (event) => { setStatusFilter(event.target.value); };
   const handleSearchChange = (event) => { setSearchTerm(event.target.value); };
-  const handleRequestSort = (property) => { const isAsc = orderBy === property && order === 'asc'; setOrder(isAsc ? 'desc' : 'asc'); setOrderBy(property); };
+  const handleRequestSort = (event, property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
 
   const handleNavigateToGrading = (assignmentCode, courseId) => {
     if (!assignmentCode || !courseId) {
@@ -312,10 +388,17 @@ export default function AssignmentsManagement() {
     navigate(`/gradesform`, { state: { courseId: String(courseId), assignmentCode: assignmentCode } });
   };
 
+  const handleChangePage = (event, newPage) => { setPage(newPage); };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   const headCells = [
     { id: 'assignmentCode', numeric: false, label: 'Code' },
     { id: 'assignmentName', numeric: false, label: 'Assignment Name' },
-    { id: 'courseIdentifier', numeric: false, label: 'Course' },
+    { id: 'courseId', numeric: false, label: 'Course' },
     { id: 'assignmentType', numeric: false, label: 'Type' },
     { id: 'weight', numeric: true, label: 'Weight' },
     { id: 'submissionDate', numeric: false, label: 'Deadline' },
@@ -403,7 +486,7 @@ export default function AssignmentsManagement() {
               <TableRow sx={{ '& th': { fontWeight: 'bold', backgroundColor: colors.headerBackground, color: colors.headerText } }}>
                 {headCells.map((headCell) => (
                   <TableCell key={headCell.id} align={headCell.numeric ? 'center' : 'left'} sortDirection={orderBy === headCell.id ? order : false} >
-                    <TableSortLabel active={orderBy === headCell.id} direction={orderBy === headCell.id ? order : 'asc'} onClick={() => handleRequestSort(headCell.id)} sx={{ '&.MuiTableSortLabel-active': { color: colors.headerText }, '& .MuiTableSortLabel-icon': { color: `${colors.headerText} !important` } }} >
+                    <TableSortLabel active={orderBy === headCell.id} direction={orderBy === headCell.id ? order : 'asc'} onClick={(event) => handleRequestSort(event, headCell.id)} sx={{ '&.MuiTableSortLabel-active': { color: colors.headerText }, '& .MuiTableSortLabel-icon': { color: `${colors.headerText} !important` } }} >
                       {headCell.label} {orderBy === headCell.id ? (<Box component="span" sx={visuallyHidden}>{order === 'desc' ? 'sorted descending' : 'sorted ascending'}</Box>) : null}
                     </TableSortLabel>
                   </TableCell>
@@ -412,60 +495,107 @@ export default function AssignmentsManagement() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {isLoading ? ( <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 4 }}><CircularProgress /><Typography sx={{ mt: 1 }}>Loading...</Typography></TableCell></TableRow> )
-               : error ? ( <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 4 }}><Typography color="error">{error}</Typography><Button onClick={fetchInitialData} sx={{ mt: 1 }}>Retry</Button></TableCell></TableRow> )
-               : processedAssignments.length === 0 ? ( <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 4 }}><Typography>No assignments match filters/search.</Typography></TableCell></TableRow> )
-               : (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={tableColSpan} align="center" sx={{ py: 4 }}>
+                    <CircularProgress />
+                    <Typography sx={{ mt: 1 }}>Loading...</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={tableColSpan} align="center" sx={{ py: 4 }}>
+                    <Typography color="error">{error}</Typography>
+                    <Button onClick={fetchData} sx={{ mt: 1 }}>Retry</Button>
+                  </TableCell>
+                </TableRow>
+              ) : processedAssignments.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={tableColSpan} align="center" sx={{ py: 4 }}>
+                    <Typography>No assignments match filters/search.</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
                 processedAssignments.map((assign) => {
                   if (!assign || !assign.assignmentCode) return null;
-                  const displayCourseId = assign.courseIdentifier || 'N/A';
+                  const displayCourseId = assign.courseId || 'N/A';
                   const courseName = courseOptions.find(c => c && c.courseId != null && String(c.courseId) === String(displayCourseId))?.courseName || '';
 
                   return (
                     <TableRow key={assign.assignmentCode} hover sx={{ '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' } }}>
                       <TableCell component="th" scope="row">{assign.assignmentCode}</TableCell>
                       <TableCell>{assign.assignmentName || 'N/A'}</TableCell>
-                      <TableCell>{displayCourseId} <Typography variant="caption" display="block">{courseName}</Typography></TableCell>
+                      <TableCell>
+                        {displayCourseId}
+                        <Typography variant="caption" display="block">{courseName}</Typography>
+                      </TableCell>
                       <TableCell>
                         {assign.assignmentType ? (
-                           <Chip
-                             label={assign.assignmentType}
-                             size="small"
-                             variant="outlined"
-                             color={assign.assignmentType === 'Group' ? 'primary' : 'default'}
-                           />
-                         ) : 'N/A'}
+                          <Chip
+                            label={assign.assignmentType}
+                            size="small"
+                            variant="outlined"
+                            color={assign.assignmentType === 'Group' ? 'primary' : 'default'}
+                          />
+                        ) : 'N/A'}
                       </TableCell>
                       <TableCell align="center">{assign.weight != null ? `${assign.weight}%` : 'N/A'}</TableCell>
                       <TableCell>{formatDate(assign.submissionDate)}</TableCell>
                       <TableCell align="center">
-                        {assign.status && (assign.status === 'Active' || assign.status === 'Past Due' || assign.status === 'Unknown' || assign.status === 'Invalid Date') ? (
-                           <Chip
-                             label={assign.status}
-                             size="small"
-                             variant="outlined"
-                             color={
-                               assign.status === 'Active' ? 'success' :
-                               assign.status === 'Past Due' ? 'error' :
-                               'default'
-                             }
-                           />
-                         ) : ( <Typography variant="caption" color="text.secondary">-</Typography> )}
+                        <Chip
+                          label={getAssignmentStatus(assign.submissionDate)}
+                          size="small"
+                          variant="outlined"
+                          color={
+                            getAssignmentStatus(assign.submissionDate) === 'Active' ? 'success' :
+                            getAssignmentStatus(assign.submissionDate) === 'Past Due' ? 'error' :
+                            'default'
+                          }
+                        />
                       </TableCell>
                       <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
                         <Tooltip title={`${assign.submittedCount ?? '?'} submitted / ${assign.enrolledCount ?? '?'} enrolled. Click to view details.`}>
-                           <Box
-                             sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mr: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, px: 0.8, py: 0.3, cursor: 'pointer', '&:hover': {backgroundColor: 'action.hover'} }}
-                             onClick={() => handleViewSubmissions(assign.assignmentCode)}
-                           >
-                             <Typography variant="body2" sx={{ lineHeight: 1 }}> {assign.submittedCount ?? '?'} / {assign.enrolledCount ?? '?'} </Typography>
-                             <PeopleIcon fontSize="inherit" color="primary" sx={{ ml: 0.3 }}/>
-                           </Box>
+                          <Box
+                            sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mr: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, px: 0.8, py: 0.3, cursor: 'pointer', '&:hover': {backgroundColor: 'action.hover'} }}
+                            onClick={() => handleViewSubmissions(assign.assignmentCode)}
+                          >
+                            <Typography variant="body2" sx={{ lineHeight: 1 }}> {assign.submittedCount ?? '?'} / {assign.enrolledCount ?? '?'} </Typography>
+                            <PeopleIcon fontSize="inherit" color="primary" sx={{ ml: 0.3 }}/>
+                          </Box>
                         </Tooltip>
-                        <Tooltip title="View Details"><IconButton size="small" onClick={() => handleOpenInfoDialog(assign)} color="default"><InfoIcon fontSize="inherit" /></IconButton></Tooltip>
-                        <Tooltip title="Edit Assignment"><IconButton size="small" onClick={() => handleEditAssignment(assign.assignmentCode)} color="primary"><EditIcon fontSize="inherit" /></IconButton></Tooltip>
-                        <Tooltip title="Grade Assignment"><IconButton size="small" onClick={() => handleNavigateToGrading(assign.assignmentCode, assign.courseIdentifier)} color="success" disabled={!assign.courseIdentifier}><GradingIcon fontSize="inherit" /></IconButton></Tooltip>
-                        <Tooltip title="Delete Assignment"><IconButton size="small" onClick={() => handleOpenDeleteDialog(assign.assignmentCode, assign.assignmentName)} color="error"><DeleteIcon fontSize="inherit" /></IconButton></Tooltip>
+                        <Tooltip title="View Details">
+                          <IconButton size="small" onClick={() => handleOpenInfoDialog(assign)} color="default">
+                            <InfoIcon fontSize="inherit" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit Assignment">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleEditAssignment(assign.assignmentCode)} 
+                            color="primary"
+                          >
+                            <EditIcon fontSize="inherit" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Grade Assignment">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleNavigateToGrading(assign.assignmentCode, assign.courseId)} 
+                            color="success" 
+                            disabled={!assign.courseId}
+                          >
+                            <GradingIcon fontSize="inherit" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Assignment">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleOpenDeleteDialog(assign.assignmentCode, assign.assignmentName)} 
+                            color="error"
+                          >
+                            <DeleteIcon fontSize="inherit" />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   );
@@ -497,11 +627,11 @@ export default function AssignmentsManagement() {
             <List dense>
               <ListItem><ListItemText primary="Code" secondary={viewInfo.assignment.assignmentCode} /></ListItem>
               <ListItem><ListItemText primary="Name" secondary={viewInfo.assignment.assignmentName} /></ListItem>
-              <ListItem><ListItemText primary="Course ID" secondary={viewInfo.assignment.courseIdentifier || 'N/A'} /></ListItem>
+              <ListItem><ListItemText primary="Course ID" secondary={viewInfo.assignment.courseId || 'N/A'} /></ListItem>
               <ListItem><ListItemText primary="Type" secondary={viewInfo.assignment.assignmentType || 'N/A'} /></ListItem>
               <ListItem><ListItemText primary="Weight" secondary={viewInfo.assignment.weight != null ? `${viewInfo.assignment.weight}%` : 'N/A'} /></ListItem>
               <ListItem><ListItemText primary="Deadline" secondary={formatDate(viewInfo.assignment.submissionDate)} /></ListItem>
-              <ListItem><ListItemText primary="Status" secondary={viewInfo.assignment.status} /></ListItem>
+              <ListItem><ListItemText primary="Status" secondary={getAssignmentStatus(viewInfo.assignment.submissionDate)} /></ListItem>
               <ListItem><ListItemText primary="Submissions" secondary={`${viewInfo.assignment.submittedCount ?? '?'} / ${viewInfo.assignment.enrolledCount ?? '?'}`} /></ListItem>
             </List>
           ) : (
@@ -545,7 +675,7 @@ export default function AssignmentsManagement() {
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity || 'info'} sx={{ width: '100%' }} variant="filled">
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">
           {snackbar.message}
         </Alert>
       </Snackbar>

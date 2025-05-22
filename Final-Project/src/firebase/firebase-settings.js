@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
 
 
 // TODO: Add SDKs for Firebase products that you want to use
@@ -12,7 +12,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyBi4VV_TSpnNwKoS6keFeoH0OTyPgkLjBs",
   authDomain: "ono-website-d6afa.firebaseapp.com",
   projectId: "ono-website-d6afa",
-  storageBucket: "ono-website-d6afa.firebasestorage.app",
+  storageBucket: "ono-website-d6afa.appspot.com",
   messagingSenderId: "800387104622",
   appId: "1:800387104622:web:0a97b160cd3d27c39a0b7f",
   measurementId: "G-K6B4R7M6PL"
@@ -20,4 +20,11 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const firestore = getFirestore(app);
+
+// Initialize Firestore with settings
+const firestore = initializeFirestore(app, {
+  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+  experimentalForceOwningTab: true
+});
+
+export { firestore };

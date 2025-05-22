@@ -11,12 +11,23 @@ import HomeIcon from '@mui/icons-material/Home';
 import InfoIcon from '@mui/icons-material/Info';
 import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
+import { addCourse, updateCourse, listCourses, getCourseById } from '../firebase/courses';
 
 const colors = {
-  green: '#bed630', greenDark: '#a7bc2a', text: '#000000', white: '#ffffff'
+  green: '#bed630',
+  greenDark: '#a7bc2a',
+  text: '#000000',
+  white: '#ffffff'
 };
 
-const COURSES_STORAGE_KEY = 'courses';
+const DAYS_OF_WEEK = [
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
+];
+
+const TIME_SLOTS = [
+  '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
+  '16:00', '17:00', '18:00', '19:00', '20:00'
+];
 
 export default function CourseForm() {
   const navigate = useNavigate();
@@ -27,185 +38,122 @@ export default function CourseForm() {
   const isDuplicateMode = Boolean(location.state?.courseToDuplicate);
   const courseToDuplicateData = location.state?.courseToDuplicate;
 
-  const getInitialState = () => {
-    if (isDuplicateMode && courseToDuplicateData) {
-      return {
-        courseId: '',
-        courseName: courseToDuplicateData.courseName || '',
-        creditPoints: courseToDuplicateData.creditPoints ?? '',
-        semester: courseToDuplicateData.semester || '',
-        professorsName: courseToDuplicateData.professorsName || '',
-        dayOfWeek: courseToDuplicateData.dayOfWeek || '',
-        startTime: courseToDuplicateData.startTime || '',
-        endTime: courseToDuplicateData.endTime || '',
-        description: courseToDuplicateData.description || '',
-        startingDate: courseToDuplicateData.startingDate || '',
-      };
-    }
-    return {
-      courseId: '', courseName: '', creditPoints: '', semester: '',
-      professorsName: '', dayOfWeek: '', startTime: '', endTime: '',
-      description: '', startingDate: '',
-    };
-  };
-
-  const [formData, setFormData] = useState(getInitialState);
-  const [errors, setErrors] = useState({});
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [isLoading, setIsLoading] = useState(isEditMode);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    courseId: '',
+    courseName: '',
+    professorsName: '',
+    creditPoints: '',
+    dayOfWeek: '',
+    startTime: '',
+    endTime: '',
+    startingDate: '',
+    description: '',
+    semester: ''
+  });
 
   useEffect(() => {
-    if (isEditMode) {
-      setIsLoading(true);
-      let courseFound = false;
-      try {
-        const courses = JSON.parse(localStorage.getItem(COURSES_STORAGE_KEY)) || [];
-        const courseToEdit = courses.find(c => c.courseId === editCourseId);
-        if (courseToEdit) {
-          setFormData({
-            courseId: courseToEdit.courseId,
-            courseName: courseToEdit.courseName || '',
-            creditPoints: courseToEdit.creditPoints ?? '',
-            semester: courseToEdit.semester || '',
-            professorsName: courseToEdit.professorsName || '',
-            dayOfWeek: courseToEdit.dayOfWeek || '',
-            startTime: courseToEdit.startTime || '',
-            endTime: courseToEdit.endTime || '',
-            description: courseToEdit.description || '',
-            startingDate: courseToEdit.startingDate || '',
-          });
-          courseFound = true;
-        } else {
-          setSnackbar({ open: true, message: `Error: Course with ID ${editCourseId} not found.`, severity: 'error' });
-          navigate('/coursesmanagement');
-        }
-      } catch (err) {
-        console.error("Error loading course for editing:", err);
-        setSnackbar({ open: true, message: 'Error loading course data.', severity: 'error' });
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-       setIsLoading(false);
-       if (location.state?.courseToDuplicate) {
-          navigate(location.pathname, { replace: true, state: {} });
-       }
-    }
-  }, [editCourseId, isEditMode, navigate, location.state, location.pathname]);
-
-
-  const validate = () => {
-    const temp = {};
-    const courseName = formData.courseName.trim();
-
-    if (!courseName) {
-      temp.courseName = 'Course Name is required.';
-    }
-
-    if (!isEditMode) {
-        if (!formData.courseId) {
-          temp.courseId = 'Course ID is required.';
-        } else if (!courseName) {
-          temp.courseId = 'Enter Course Name first to validate ID format.';
-        } else {
-          const expectedFirstLetter = courseName.charAt(0).toUpperCase();
-          const courseIdRegex = new RegExp(`^${expectedFirstLetter}\\d{4}$`);
-          if (!courseIdRegex.test(formData.courseId)) {
-            temp.courseId = `Course ID must start with '${expectedFirstLetter}' (from the course name), followed by exactly 4 digits — e.g., ${expectedFirstLetter}1234.`;
+    const fetchCourseData = async () => {
+      if (isEditMode) {
+        setLoading(true);
+        try {
+          const courseData = await getCourseById(editCourseId);
+          if (courseData) {
+            setFormData(courseData);
+          } else {
+            setError('Course not found');
           }
+        } catch (err) {
+          setError('Error loading course data');
+          console.error('Error loading course:', err);
+        } finally {
+          setLoading(false);
         }
-    }
+      } else if (isDuplicateMode && courseToDuplicateData) {
+        setFormData({
+          ...courseToDuplicateData,
+          courseId: '',
+          startingDate: ''
+        });
+      }
+    };
 
-    if (formData.creditPoints === '' || formData.creditPoints === null || isNaN(formData.creditPoints) || Number(formData.creditPoints) <= 0) {
-      temp.creditPoints = 'Credit Points must be a positive number.';
-    }
-    if (!formData.semester) temp.semester = 'Semester is required.';
-    if (!formData.professorsName) temp.professorsName = "Professor's Name is required.";
-    if (!formData.dayOfWeek) temp.dayOfWeek = 'Day of Week is required.';
-    if (!formData.startTime) temp.startTime = 'Start Time is required.';
-    if (!formData.endTime) {
-        temp.endTime = 'End Time is required.';
-    } else if (formData.startTime && formData.endTime <= formData.startTime) {
-        temp.endTime = 'End Time must be after Start Time.';
-    }
-    if (!formData.description) temp.description = 'Description is required.';
-    if (!formData.startingDate) temp.startingDate = 'Starting Date is required.';
+    fetchCourseData();
+  }, [isEditMode, editCourseId, isDuplicateMode, courseToDuplicateData]);
 
-    setErrors(temp);
-    return Object.keys(temp).length === 0;
-  };
-
-  const handleChange = (e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
     let processedValue = value;
 
     if (name === 'courseId' && !isEditMode) {
-        processedValue = value.toUpperCase();
+      processedValue = value.toUpperCase();
     }
     if (name === 'creditPoints' && value !== '') {
-        processedValue = Number(value);
+      processedValue = Number(value);
     }
 
-    setFormData((prev) => ({ ...prev, [name]: processedValue }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: processedValue
+    }));
   };
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    if (!formData.courseId.trim()) return 'Course ID is required';
+    if (!formData.courseName.trim()) return 'Course Name is required';
+    if (!formData.professorsName.trim()) return 'Professor Name is required';
+    if (!formData.creditPoints) return 'Credit Points is required';
+    if (!formData.dayOfWeek) return 'Day of Week is required';
+    if (!formData.startTime) return 'Start Time is required';
+    if (!formData.endTime) return 'End Time is required';
+    if (!formData.startingDate) return 'Starting Date is required';
+    if (formData.startTime >= formData.endTime) return 'End Time must be after Start Time';
+
+    // Validate course ID format
+    if (!isEditMode) {
+      const courseNameFirstLetter = formData.courseName.trim().charAt(0).toUpperCase();
+      const courseIdRegex = new RegExp(`^${courseNameFirstLetter}\\d{4}$`);
+      if (!courseIdRegex.test(formData.courseId)) {
+        return `Course ID must start with '${courseNameFirstLetter}' (from the course name), followed by exactly 4 digits — e.g., ${courseNameFirstLetter}1234`;
+      }
+    }
+
+    return null;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validate()) {
-      setSnackbar({ open: true, message: 'Please fix the errors in the form.', severity: 'error' });
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
+    setLoading(true);
     try {
-      const courses = JSON.parse(localStorage.getItem(COURSES_STORAGE_KEY)) || [];
+      const courseData = {
+        ...formData,
+        creditPoints: Number(formData.creditPoints)
+      };
 
       if (isEditMode) {
-        const courseIndex = courses.findIndex(c => c.courseId === editCourseId);
-        if (courseIndex === -1) {
-           setSnackbar({ open: true, message: `Error: Course with ID ${editCourseId} not found for update.`, severity: 'error' });
-           return;
-        }
-        const updatedCourse = {
-            ...courses[courseIndex],
-            ...formData,
-            courseId: editCourseId,
-            courseHours: `${formData.startTime || 'N/A'} - ${formData.endTime || 'N/A'}`,
-            creditPoints: Number(formData.creditPoints)
-        };
-        courses[courseIndex] = updatedCourse;
-        localStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify(courses));
-        setSnackbar({ open: true, message: 'Course updated successfully!', severity: 'success' });
-
+        await updateCourse(editCourseId, courseData);
       } else {
-        const exists = courses.some((c) => c.courseId === formData.courseId);
-        if (exists) {
-          setSnackbar({ open: true, message: `Error: Course ID ${formData.courseId} already exists!`, severity: 'error' });
-          return;
-        }
-        const newCourse = {
-          ...formData,
-          courseHours: `${formData.startTime || 'N/A'} - ${formData.endTime || 'N/A'}`,
-          creditPoints: Number(formData.creditPoints)
-        };
-        courses.push(newCourse);
-        localStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify(courses));
-        setSnackbar({ open: true, message: `Course ${isDuplicateMode ? 'duplicated and ' : ''}added successfully!`, severity: 'success' });
+        await addCourse(courseData);
       }
-
-      setTimeout(() => {
-        navigate('/coursesmanagement');
-      }, 1500);
-
+      navigate('/coursesmanagement');
     } catch (err) {
-      console.error("Error saving course:", err);
-      setSnackbar({ open: true, message: 'Error saving course. Please check console for details.', severity: 'error' });
+      console.error('Error saving course:', err);
+      setError(err.message || 'Error saving course. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleCloseSnackbar = (event, reason) => {
     if (reason === 'clickaway') return;
-    setSnackbar((prev) => ({ ...prev, open: false }));
+    setError('');
   };
 
   let pageTitle = 'Create New Course';
@@ -219,11 +167,26 @@ export default function CourseForm() {
     pageTitle = 'Create New Course';
   }
 
+  if (loading) {
+    return (
+      <Container maxWidth="md" sx={{ py: 2 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="250px">
+          <CircularProgress sx={{ color: colors.green }} />
+        </Box>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="md" sx={{ py: 2 }}>
       <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
-        <Link component={RouterLink} underline="hover" sx={{ display: 'flex', alignItems: 'center' }} color="inherit" to="/"> <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" /> Home </Link>
-        <Link component={RouterLink} underline="hover" color="inherit" to="/coursesmanagement"> Manage Courses </Link>
+        <Link component={RouterLink} underline="hover" sx={{ display: 'flex', alignItems: 'center' }} color="inherit" to="/">
+          <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+          Home
+        </Link>
+        <Link component={RouterLink} underline="hover" color="inherit" to="/coursesmanagement">
+          Manage Courses
+        </Link>
         <Typography color="text.primary">{isEditMode ? 'Edit Course' : 'Add Course'}</Typography>
       </Breadcrumbs>
 
@@ -232,127 +195,196 @@ export default function CourseForm() {
           {pageTitle}
         </Typography>
 
-        {isLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '250px' }}>
-                <CircularProgress sx={{ color: colors.green }} />
-            </Box>
-        ) : (
-            <Grid container spacing={1.5}>
-              <Grid item xs={12}>
-                <TextField fullWidth label="Course Name" name="courseName" value={formData.courseName} onChange={handleChange} error={!!errors.courseName} helperText={errors.courseName} required />
-              </Grid>
+        <Grid container spacing={1.5}>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Course Name"
+              name="courseName"
+              value={formData.courseName}
+              onChange={handleInputChange}
+              required
+            />
+          </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Course ID"
-                  name="courseId"
-                  value={formData.courseId}
-                  onChange={handleChange}
-                  error={!!errors.courseId}
-                  helperText={errors.courseId}
-                  required
-                  disabled={isEditMode}
-                  slotProps={{
-                      maxLength: 5,
-                      style: {
-                          textTransform: 'uppercase',
-                          backgroundColor: isEditMode ? 'action.disabledBackground' : 'inherit',
-                          color: isEditMode ? 'text.disabled' : 'inherit',
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Course ID"
+              name="courseId"
+              value={formData.courseId}
+              onChange={handleInputChange}
+              disabled={isEditMode}
+              required
+              InputProps={{
+                endAdornment: !isEditMode && (
+                  <InputAdornment position="end">
+                    <Tooltip
+                      title={
+                        formData.courseName.trim()
+                          ? `Format: '${formData.courseName.trim().charAt(0).toUpperCase()}' (from Course Name) followed by 4 digits (e.g., ${formData.courseName.trim().charAt(0).toUpperCase()}1234)`
+                          : "Format: First letter of Course Name + 4 digits. Please enter Course Name first."
                       }
-                  }}
-                  slotPropss={ isEditMode ? {} : {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <Tooltip
-                          title={
-                            formData.courseName.trim()
-                              ? `Format: '${formData.courseName.trim().charAt(0).toUpperCase()}' (from Course Name) followed by 4 digits (e.g., ${formData.courseName.trim().charAt(0).toUpperCase()}1234)`
-                              : "Format: First letter of Course Name + 4 digits. Please enter Course Name first."
-                          }
-                          arrow
-                        >
-                          <IconButton edge="end" size="small" aria-label="Course ID format info">
-                            <InfoIcon fontSize="small" sx={{ color: 'action.active' }} />
-                          </IconButton>
-                        </Tooltip>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
+                      arrow
+                    >
+                      <IconButton edge="end" size="small" aria-label="Course ID format info">
+                        <InfoIcon fontSize="small" sx={{ color: 'action.active' }} />
+                      </IconButton>
+                    </Tooltip>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Credit Points" name="creditPoints" type="number" slotProps={{ min: 1, step: "any" }} value={formData.creditPoints} onChange={handleChange} error={!!errors.creditPoints} helperText={errors.creditPoints} required />
-              </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Credit Points"
+              name="creditPoints"
+              type="number"
+              value={formData.creditPoints}
+              onChange={handleInputChange}
+              inputProps={{ min: 1, step: "any" }}
+              required
+            />
+          </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth error={!!errors.semester} required>
-                  <InputLabel>Semester</InputLabel>
-                  <Select name="semester" value={formData.semester} onChange={handleChange} label="Semester">
-                    <MenuItem value="A">A</MenuItem>
-                    <MenuItem value="B">B</MenuItem>
-                    <MenuItem value="Summer">Summer</MenuItem>
-                  </Select>
-                  {errors.semester && <FormHelperText>{errors.semester}</FormHelperText>}
-                </FormControl>
-              </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Professor's Name"
+              name="professorsName"
+              value={formData.professorsName}
+              onChange={handleInputChange}
+              required
+            />
+          </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Professor's Name" name="professorsName" value={formData.professorsName} onChange={handleChange} error={!!errors.professorsName} helperText={errors.professorsName} required />
-              </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Starting Date"
+              name="startingDate"
+              type="date"
+              value={formData.startingDate}
+              onChange={handleInputChange}
+              InputLabelProps={{ shrink: true }}
+              required
+            />
+          </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth error={!!errors.dayOfWeek} required>
-                  <InputLabel>Day of Week</InputLabel>
-                  <Select name="dayOfWeek" value={formData.dayOfWeek} onChange={handleChange} label="Day of Week">
-                    <MenuItem value="Sunday">Sunday</MenuItem>
-                    <MenuItem value="Monday">Monday</MenuItem>
-                    <MenuItem value="Tuesday">Tuesday</MenuItem>
-                    <MenuItem value="Wednesday">Wednesday</MenuItem>
-                    <MenuItem value="Thursday">Thursday</MenuItem>
-                    <MenuItem value="Friday">Friday</MenuItem>
-                  </Select>
-                  {errors.dayOfWeek && <FormHelperText>{errors.dayOfWeek}</FormHelperText>}
-                </FormControl>
-              </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth required>
+              <InputLabel>Semester</InputLabel>
+              <Select
+                name="semester"
+                value={formData.semester}
+                onChange={handleInputChange}
+                label="Semester"
+              >
+                <MenuItem value="A">Semester A</MenuItem>
+                <MenuItem value="B">Semester B</MenuItem>
+                <MenuItem value="Summer">Summer Semester</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Starting Date" name="startingDate" type="date" value={formData.startingDate} onChange={handleChange} InputLabelProps={{ shrink: true }} error={!!errors.startingDate} helperText={errors.startingDate} required />
-              </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth required>
+              <InputLabel>Day of Week</InputLabel>
+              <Select
+                name="dayOfWeek"
+                value={formData.dayOfWeek}
+                onChange={handleInputChange}
+                label="Day of Week"
+              >
+                {DAYS_OF_WEEK.map(day => (
+                  <MenuItem key={day} value={day}>{day}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Start Time" name="startTime" type="time" value={formData.startTime} onChange={handleChange} InputLabelProps={{ shrink: true }} error={!!errors.startTime} helperText={errors.startTime} required />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="End Time" name="endTime" type="time" value={formData.endTime} onChange={handleChange} InputLabelProps={{ shrink: true }} error={!!errors.endTime} helperText={errors.endTime} required />
-              </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth required>
+              <InputLabel>Start Time</InputLabel>
+              <Select
+                name="startTime"
+                value={formData.startTime}
+                onChange={handleInputChange}
+                label="Start Time"
+              >
+                {TIME_SLOTS.map(time => (
+                  <MenuItem key={time} value={time}>{time}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
 
-              <Grid item xs={12}>
-                <TextField fullWidth label="Course Description" name="description" multiline rows={3} value={formData.description} onChange={handleChange} error={!!errors.description} helperText={errors.description} required />
-              </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth required>
+              <InputLabel>End Time</InputLabel>
+              <Select
+                name="endTime"
+                value={formData.endTime}
+                onChange={handleInputChange}
+                label="End Time"
+              >
+                {TIME_SLOTS.map(time => (
+                  <MenuItem key={time} value={time}>{time}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
 
-              <Grid item xs={12} textAlign="center" sx={{ mt: 1 }}>
-                <Button
-                  variant="contained"
-                  type="submit"
-                  size="medium"
-                  startIcon={submitButtonIcon}
-                  sx={{
-                    backgroundColor: colors.green, color: colors.text, fontWeight: 500, px: 4,
-                    borderRadius: '6px', textTransform: 'none', boxShadow: 'none',
-                    '&:hover': { backgroundColor: colors.greenDark, boxShadow: 'none' },
-                  }}
-                >
-                  {submitButtonText}
-                </Button>
-              </Grid>
-            </Grid>
-        )}
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Course Description"
+              name="description"
+              multiline
+              rows={3}
+              value={formData.description}
+              onChange={handleInputChange}
+            />
+          </Grid>
+        </Grid>
+
+        <Grid item xs={12} textAlign="center" sx={{ mt: 1 }}>
+          <Button
+            variant="contained"
+            type="submit"
+            size="medium"
+            startIcon={submitButtonIcon}
+            sx={{
+              backgroundColor: colors.green,
+              color: colors.text,
+              fontWeight: 500,
+              px: 4,
+              borderRadius: '6px',
+              textTransform: 'none',
+              boxShadow: 'none',
+              '&:hover': {
+                backgroundColor: colors.greenDark,
+                boxShadow: 'none'
+              },
+            }}
+          >
+            {submitButtonText}
+          </Button>
+        </Grid>
       </Box>
 
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}> {snackbar.message} </Alert>
+      <Snackbar
+        open={!!error}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+          {error}
+        </Alert>
       </Snackbar>
     </Container>
   );
