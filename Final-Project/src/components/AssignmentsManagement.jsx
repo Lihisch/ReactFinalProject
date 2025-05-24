@@ -29,6 +29,12 @@ import { format, isPast, parseISO, isValid } from 'date-fns';
 import { listAssignments, deleteAssignment } from '../firebase/assignments';
 import { listStudents } from '../firebase/students';
 import { listCourses } from '../firebase/courses';
+import { 
+  getAllSubmissions,
+  getSubmissionsByStatus,
+  getSubmissionsByDateRange,
+  deleteSubmission
+} from '../firebase/submissions';
 
 // Simplified color palette, similar to GradesManagement
 const colors = {
@@ -114,17 +120,19 @@ export default function AssignmentsManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [confirmDelete, setConfirmDelete] = useState({ open: false, assignmentCode: null, assignmentName: '' });
+  const [confirmDelete, setConfirmDelete] = useState({ open: false, assignmentId: null, assignmentName: '' });
   const [viewInfo, setViewInfo] = useState({ open: false, assignment: null });
-  const [submissionsView, setSubmissionsView] = useState({ open: false, assignmentCode: null, assignmentName: '', studentSubmissions: [], loading: false });
+  const [submissionsView, setSubmissionsView] = useState({ open: false, assignmentId: null, assignmentName: '', studentSubmissions: [], loading: false });
   const [courseFilter, setCourseFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [order, setOrder] = useState('asc');
-  const [orderBy, setOrderBy] = useState('assignmentCode');
+  const [orderBy, setOrderBy] = useState('assignmentId');
   const [stats, setStats] = useState({ total: 0, active: 0, pastDue: 0 });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [submissions, setSubmissions] = useState([]);
+  const [dateRange, setDateRange] = useState({ start: null, end: null });
 
   const safeJsonParse = (key, defaultValue = []) => {
     try {
@@ -141,90 +149,111 @@ export default function AssignmentsManagement() {
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        console.log('Starting to fetch data from Firebase...');
-        const [assignmentsData, coursesData] = await Promise.all([
-          listAssignments(),
-          listCourses()
-        ]);
+  const fetchData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      console.log('Starting to fetch data from Firebase...');
+      const [assignmentsData, coursesData] = await Promise.all([
+        listAssignments(),
+        listCourses()
+      ]);
 
-        console.log('Raw assignments data:', assignmentsData);
-        console.log('Raw courses data:', coursesData);
+      console.log('Raw assignments data:', assignmentsData);
+      console.log('Raw courses data:', coursesData);
 
-        if (!Array.isArray(assignmentsData)) {
-          throw new Error('Invalid assignments data received');
+      if (!Array.isArray(assignmentsData)) {
+        throw new Error('Invalid assignments data received');
+      }
+
+      // Process assignments to calculate stats
+      const activeCount = assignmentsData.filter(a => {
+        try {
+          const dueDate = parseISO(a.dueDate);
+          return isValid(dueDate) && !isPast(dueDate);
+        } catch (error) {
+          console.warn('Invalid due date for assignment:', a);
+          return false;
         }
+      }).length;
 
-        // Process assignments to calculate stats
-        const activeCount = assignmentsData.filter(a => {
-          try {
-            const dueDate = parseISO(a.dueDate);
-            return isValid(dueDate) && !isPast(dueDate);
-          } catch (error) {
-            console.warn('Invalid due date for assignment:', a);
-            return false;
-          }
-        }).length;
+      const pastDueCount = assignmentsData.filter(a => {
+        try {
+          const dueDate = parseISO(a.dueDate);
+          return isValid(dueDate) && isPast(dueDate);
+        } catch (error) {
+          console.warn('Invalid due date for assignment:', a);
+          return false;
+        }
+      }).length;
 
-        const pastDueCount = assignmentsData.filter(a => {
-          try {
-            const dueDate = parseISO(a.dueDate);
-            return isValid(dueDate) && isPast(dueDate);
-          } catch (error) {
-            console.warn('Invalid due date for assignment:', a);
-            return false;
-          }
-        }).length;
+      // Update assignments with additional data
+      const enhancedAssignments = assignmentsData.map(assignment => {
+        console.log('Processing assignment:', assignment);
+        const course = coursesData.find(c => c.courseId === assignment.courseId);
+        console.log('Found course:', course);
 
-        // Update assignments with additional data
-        const enhancedAssignments = assignmentsData.map(assignment => {
-          console.log('Processing assignment:', assignment);
-          const course = coursesData.find(c => c.courseId === assignment.courseId);
-          console.log('Found course:', course);
+        return {
+          ...assignment,
+          courseName: course ? course.courseName : 'Unknown Course',
+          assignmentId: assignment.assignmentId,
+          assignmentName: assignment.assignmentName,
+          submissionDate: assignment.dueDate,
+          weight: assignment.weight || 0,
+          assignmentType: assignment.assignmentType || 'Individual',
+          minParticipants: assignment.minParticipants || '',
+          maxParticipants: assignment.maxParticipants || '',
+          description: assignment.description || '',
+          fileName: assignment.fileName || ''
+        };
+      });
 
-          return {
-            ...assignment,
-            courseName: course ? course.courseName : 'Unknown Course',
-            assignmentCode: assignment.assignmentId,
-            assignmentName: assignment.assignmentName,
-            submissionDate: assignment.dueDate,
-            weight: assignment.weight || 0,
-            assignmentType: assignment.assignmentType || 'Individual',
-            minParticipants: assignment.minParticipants || '',
-            maxParticipants: assignment.maxParticipants || '',
-            description: assignment.description || '',
-            fileName: assignment.fileName || ''
-          };
-        });
+      console.log('Final enhanced assignments:', enhancedAssignments);
 
-        console.log('Final enhanced assignments:', enhancedAssignments);
+      setAssignments(enhancedAssignments);
+      setCourseOptions(coursesData);
+      setStats({
+        total: assignmentsData.length,
+        active: activeCount,
+        pastDue: pastDueCount
+      });
+    } catch (error) {
+      console.error("Error loading data:", error);
+      setError(error.message || "Failed to load data. Please try again.");
+      setSnackbar({ 
+        open: true, 
+        message: `Error loading data: ${error.message}`, 
+        severity: 'error' 
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-        setAssignments(enhancedAssignments);
-        setCourseOptions(coursesData);
-        setStats({
-          total: assignmentsData.length,
-          active: activeCount,
-          pastDue: pastDueCount
-        });
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchSubmissions = async () => {
+      try {
+        let submissions;
+        if (statusFilter) {
+          submissions = await getSubmissionsByStatus(statusFilter);
+        } else if (dateRange.start && dateRange.end) {
+          submissions = await getSubmissionsByDateRange(dateRange.start, dateRange.end);
+        } else {
+          submissions = await getAllSubmissions();
+        }
+        setSubmissions(submissions);
       } catch (error) {
-        console.error("Error loading data:", error);
-        setError(error.message || "Failed to load data. Please try again.");
-        setSnackbar({ 
-          open: true, 
-          message: `Error loading data: ${error.message}`, 
-          severity: 'error' 
-        });
-      } finally {
-        setIsLoading(false);
+        console.error('Error fetching submissions:', error);
+        setError('Failed to fetch submissions');
       }
     };
 
-    fetchData();
-  }, []);
+    fetchSubmissions();
+  }, [statusFilter, dateRange]);
 
   const processedAssignments = useMemo(() => {
     if (!Array.isArray(assignments)) {
@@ -255,7 +284,7 @@ export default function AssignmentsManagement() {
             processed = processed.filter(assign =>
                 assign && (
                     (assign.assignmentName && assign.assignmentName.toLowerCase().includes(lowerSearchTerm)) ||
-                    (assign.assignmentCode && assign.assignmentCode.toLowerCase().includes(lowerSearchTerm)) ||
+                    (assign.assignmentId && assign.assignmentId.toLowerCase().includes(lowerSearchTerm)) ||
                     (assign.courseId && String(assign.courseId).toLowerCase().includes(lowerSearchTerm))
                 )
             );
@@ -273,29 +302,29 @@ export default function AssignmentsManagement() {
   }, [assignments, courseFilter, statusFilter, searchTerm, order, orderBy]);
 
   const handleAddAssignment = () => { navigate('/assignmentsform'); };
-  const handleEditAssignment = (assignmentCode) => {
-    if (!assignmentCode) {
-      setSnackbar({ open: true, message: 'Invalid assignment code', severity: 'error' });
+  const handleEditAssignment = (assignmentId) => {
+    if (!assignmentId) {
+      setSnackbar({ open: true, message: 'Invalid assignment ID', severity: 'error' });
       return;
     }
-    console.log('Navigating to edit assignment:', assignmentCode);
-    // Navigate to the edit form with the correct code
-    navigate(`/assignmentsform/${assignmentCode}`);
+    console.log('Navigating to edit assignment:', assignmentId);
+    // Navigate to the edit form with the correct ID
+    navigate(`/assignmentsform/${assignmentId}`);
   };
-  const handleOpenDeleteDialog = (assignmentCode, assignmentName) => { setConfirmDelete({ open: true, assignmentCode, assignmentName }); };
-  const handleCloseDeleteDialog = () => { setConfirmDelete({ open: false, assignmentCode: null, assignmentName: '' }); };
+  const handleOpenDeleteDialog = (assignmentId, assignmentName) => { setConfirmDelete({ open: true, assignmentId, assignmentName }); };
+  const handleCloseDeleteDialog = () => { setConfirmDelete({ open: false, assignmentId: null, assignmentName: '' }); };
 
   const handleConfirmDelete = async () => {
-    if (!confirmDelete.assignmentCode) return;
+    if (!confirmDelete.assignmentId) return;
     try {
-      await deleteAssignment(confirmDelete.assignmentCode);
+      await deleteAssignment(confirmDelete.assignmentId);
       setSnackbar({ 
         open: true, 
         message: `Assignment '${confirmDelete.assignmentName}' deleted successfully.`, 
         severity: 'success' 
       });
       // Refresh data after deletion
-      fetchData();
+      await fetchData();
     } catch (error) {
       console.error("Error deleting assignment:", error);
       setSnackbar({ 
@@ -309,20 +338,20 @@ export default function AssignmentsManagement() {
   };
 
   const handleOpenInfoDialog = (assignment) => {
-    if (!assignment || !assignment.assignmentCode) {
+    if (!assignment || !assignment.assignmentId) {
         return;
     }
-    const currentAssignmentData = assignments.find(a => a.assignmentCode === assignment.assignmentCode) || assignment;
+    const currentAssignmentData = assignments.find(a => a.assignmentId === assignment.assignmentId) || assignment;
     setViewInfo({ open: true, assignment: currentAssignmentData });
    };
   const handleCloseInfoDialog = () => { setViewInfo({ open: false, assignment: null }); };
 
-  const handleViewSubmissions = (assignmentCode) => {
-    if (!assignmentCode) return;
-    setSubmissionsView(prev => ({ ...prev, loading: true, open: true, assignmentCode }));
+  const handleViewSubmissions = (assignmentId) => {
+    if (!assignmentId) return;
+    setSubmissionsView(prev => ({ ...prev, loading: true, open: true, assignmentId }));
 
     setTimeout(() => {
-        const assignment = assignments.find(a => a.assignmentCode === assignmentCode);
+        const assignment = assignments.find(a => a.assignmentId === assignmentId);
         if (!assignment || !assignment.courseId) {
             setSnackbar({ open: true, message: 'Error: Assignment details or Course ID missing.', severity: 'error' });
             setSubmissionsView(prev => ({ ...prev, loading: false, open: false }));
@@ -337,7 +366,7 @@ export default function AssignmentsManagement() {
             const studentMap = new Map(allStudents.map(s => [s.studentId, s.studentName || `${s.firstName || ''} ${s.lastName || ''}`.trim() || `Unknown (${s.studentId})`]));
             const submissionMap = new Map();
             allSubmissions.forEach(sub => {
-                if (sub && sub.assignmentCode === assignmentCode && sub.studentId) {
+                if (sub && sub.assignmentId === assignmentId && sub.studentId) {
                     submissionMap.set(sub.studentId, sub.submitted);
                 }
             });
@@ -356,7 +385,7 @@ export default function AssignmentsManagement() {
 
             setSubmissionsView({
                 open: true,
-                assignmentCode,
+                assignmentId,
                 assignmentName: assignment.assignmentName,
                 studentSubmissions: studentSubmissionsData,
                 loading: false
@@ -369,7 +398,7 @@ export default function AssignmentsManagement() {
     }, 50);
   };
 
-  const handleCloseSubmissionsDialog = () => { setSubmissionsView({ open: false, assignmentCode: null, assignmentName: '', studentSubmissions: [], loading: false }); };
+  const handleCloseSubmissionsDialog = () => { setSubmissionsView({ open: false, assignmentId: null, assignmentName: '', studentSubmissions: [], loading: false }); };
   const handleCloseSnackbar = (event, reason) => { if (reason === 'clickaway') return; setSnackbar(prev => ({ ...prev, open: false })); };
   const handleCourseFilterChange = (event) => { setCourseFilter(event.target.value); };
   const handleStatusFilterChange = (event) => { setStatusFilter(event.target.value); };
@@ -380,12 +409,12 @@ export default function AssignmentsManagement() {
     setOrderBy(property);
   };
 
-  const handleNavigateToGrading = (assignmentCode, courseId) => {
-    if (!assignmentCode || !courseId) {
+  const handleNavigateToGrading = (assignmentId, courseId) => {
+    if (!assignmentId || !courseId) {
         setSnackbar({ open: true, message: 'Cannot navigate: Missing assignment or course ID.', severity: 'error' });
         return;
     }
-    navigate(`/gradesform`, { state: { courseId: String(courseId), assignmentCode: assignmentCode } });
+    navigate(`/gradesform`, { state: { courseId: String(courseId), assignmentId: assignmentId } });
   };
 
   const handleChangePage = (event, newPage) => { setPage(newPage); };
@@ -395,8 +424,27 @@ export default function AssignmentsManagement() {
     setPage(0);
   };
 
+  const handleDelete = async (submissionId) => {
+    try {
+      await deleteSubmission(submissionId);
+      setSubmissions(prev => prev.filter(sub => sub.id !== submissionId));
+      setSnackbar({ 
+        open: true, 
+        message: 'Submission deleted successfully', 
+        severity: 'success' 
+      });
+    } catch (error) {
+      console.error('Error deleting submission:', error);
+      setSnackbar({ 
+        open: true, 
+        message: 'Failed to delete submission', 
+        severity: 'error' 
+      });
+    }
+  };
+
   const headCells = [
-    { id: 'assignmentCode', numeric: false, label: 'Code' },
+    { id: 'assignmentId', numeric: false, label: 'Code' },
     { id: 'assignmentName', numeric: false, label: 'Assignment Name' },
     { id: 'courseId', numeric: false, label: 'Course' },
     { id: 'assignmentType', numeric: false, label: 'Type' },
@@ -517,13 +565,13 @@ export default function AssignmentsManagement() {
                 </TableRow>
               ) : (
                 processedAssignments.map((assign) => {
-                  if (!assign || !assign.assignmentCode) return null;
+                  if (!assign || !assign.assignmentId) return null;
                   const displayCourseId = assign.courseId || 'N/A';
                   const courseName = courseOptions.find(c => c && c.courseId != null && String(c.courseId) === String(displayCourseId))?.courseName || '';
 
                   return (
-                    <TableRow key={assign.assignmentCode} hover sx={{ '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' } }}>
-                      <TableCell component="th" scope="row">{assign.assignmentCode}</TableCell>
+                    <TableRow key={assign.assignmentId} hover sx={{ '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' } }}>
+                      <TableCell component="th" scope="row">{assign.assignmentId}</TableCell>
                       <TableCell>{assign.assignmentName || 'N/A'}</TableCell>
                       <TableCell>
                         {displayCourseId}
@@ -557,7 +605,7 @@ export default function AssignmentsManagement() {
                         <Tooltip title={`${assign.submittedCount ?? '?'} submitted / ${assign.enrolledCount ?? '?'} enrolled. Click to view details.`}>
                           <Box
                             sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mr: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, px: 0.8, py: 0.3, cursor: 'pointer', '&:hover': {backgroundColor: 'action.hover'} }}
-                            onClick={() => handleViewSubmissions(assign.assignmentCode)}
+                            onClick={() => handleViewSubmissions(assign.assignmentId)}
                           >
                             <Typography variant="body2" sx={{ lineHeight: 1 }}> {assign.submittedCount ?? '?'} / {assign.enrolledCount ?? '?'} </Typography>
                             <PeopleIcon fontSize="inherit" color="primary" sx={{ ml: 0.3 }}/>
@@ -571,7 +619,7 @@ export default function AssignmentsManagement() {
                         <Tooltip title="Edit Assignment">
                           <IconButton 
                             size="small" 
-                            onClick={() => handleEditAssignment(assign.assignmentCode)} 
+                            onClick={() => handleEditAssignment(assign.assignmentId)} 
                             color="primary"
                           >
                             <EditIcon fontSize="inherit" />
@@ -580,7 +628,7 @@ export default function AssignmentsManagement() {
                         <Tooltip title="Grade Assignment">
                           <IconButton 
                             size="small" 
-                            onClick={() => handleNavigateToGrading(assign.assignmentCode, assign.courseId)} 
+                            onClick={() => handleNavigateToGrading(assign.assignmentId, assign.courseId)} 
                             color="success" 
                             disabled={!assign.courseId}
                           >
@@ -590,7 +638,7 @@ export default function AssignmentsManagement() {
                         <Tooltip title="Delete Assignment">
                           <IconButton 
                             size="small" 
-                            onClick={() => handleOpenDeleteDialog(assign.assignmentCode, assign.assignmentName)} 
+                            onClick={() => handleOpenDeleteDialog(assign.assignmentId, assign.assignmentName)} 
                             color="error"
                           >
                             <DeleteIcon fontSize="inherit" />
@@ -611,7 +659,7 @@ export default function AssignmentsManagement() {
         <DialogTitle>Confirm Deletion</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete the assignment "{confirmDelete.assignmentName}" (Code: {confirmDelete.assignmentCode})? This action cannot be undone.
+            Are you sure you want to delete the assignment "{confirmDelete.assignmentName}" (Code: {confirmDelete.assignmentId})? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -625,7 +673,7 @@ export default function AssignmentsManagement() {
         <DialogContent>
           {viewInfo.assignment ? (
             <List dense>
-              <ListItem><ListItemText primary="Code" secondary={viewInfo.assignment.assignmentCode} /></ListItem>
+              <ListItem><ListItemText primary="Code" secondary={viewInfo.assignment.assignmentId} /></ListItem>
               <ListItem><ListItemText primary="Name" secondary={viewInfo.assignment.assignmentName} /></ListItem>
               <ListItem><ListItemText primary="Course ID" secondary={viewInfo.assignment.courseId || 'N/A'} /></ListItem>
               <ListItem><ListItemText primary="Type" secondary={viewInfo.assignment.assignmentType || 'N/A'} /></ListItem>

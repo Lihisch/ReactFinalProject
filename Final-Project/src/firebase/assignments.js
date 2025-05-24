@@ -32,10 +32,23 @@ export const listAssignments = async () => {
       return [];
     }
 
-    const assignments = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const assignments = querySnapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        if (!data.assignmentId) {
+          console.warn('Assignment missing assignmentId:', data);
+          return null;
+        }
+        return {
+          id: doc.id,
+          assignmentId: data.assignmentId,
+          assignmentName: data.assignmentName || data.name,
+          courseId: data.courseId,
+          weight: data.weight || 0,
+          ...data
+        };
+      })
+      .filter(Boolean);
 
     console.log('Fetched assignments:', assignments);
     return assignments;

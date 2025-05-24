@@ -20,6 +20,21 @@ import DangerousIcon from '@mui/icons-material/Dangerous';
 import EditIcon from '@mui/icons-material/Edit';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import PercentIcon from '@mui/icons-material/Percent';
+import { 
+  getAllSubmissions, 
+  getSubmissionsByCourse, 
+  getSubmissionsByCourseAndAssignment,
+  saveSubmission,
+  updateSubmissionGrade,
+  updateSubmissionComment,
+  updateSubmissionStatus,
+  deleteSubmission
+} from '../firebase/grades';
+import { listCourses } from '../firebase/courses';
+import { listAssignments } from '../firebase/assignments';
+import { listStudents } from '../firebase/students';
+import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import { firestore } from '../firebase/firebase-settings';
 
 
 const colors = {
@@ -39,6 +54,16 @@ const EXCELLENT_THRESHOLD = 90;
 const STATUS_GRADED = 'Graded';
 const STATUS_PENDING = 'Pending Grade';
 const STATUS_NO_SUBMISSION = 'No Submission';
+
+// Helper function to calculate median
+const calculateMedian = (numbers) => {
+    if (!numbers || numbers.length === 0) return 0;
+    const sorted = [...numbers].sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0
+        ? (sorted[middle - 1] + sorted[middle]) / 2
+        : sorted[middle];
+};
 
 export default function GradesManagement() {
   const navigate = useNavigate();
@@ -77,197 +102,247 @@ export default function GradesManagement() {
     }
   };
 
-  const fetchAllData = useCallback(() => {
+  const fetchAllData = useCallback(async () => {
     setError(null);
+    setIsLoading(true);
     try {
-      const coursesData = safeJsonParse(COURSES_STORAGE_KEY);
-      const assignmentsData = safeJsonParse(ASSIGNMENTS_STORAGE_KEY);
-      const studentsData = safeJsonParse(STUDENTS_STORAGE_KEY);
-      const submissionsData = safeJsonParse(SUBMISSIONS_STORAGE_KEY);
+        console.log('Starting to fetch all data...');
+        
+        // Fetch data one by one to better handle errors
+        let coursesData = [];
+        let assignmentsData = [];
+        let studentsData = [];
+        let submissionsData = [];
 
-      setCourses(coursesData);
-      setAssignments(assignmentsData);
-      setStudents(studentsData);
-      setSubmissions(submissionsData);
+        try {
+            coursesData = await listCourses();
+            console.log('Fetched courses:', coursesData);
+        } catch (err) {
+            console.error('Error fetching courses:', err);
+            throw new Error('Failed to load courses');
+        }
+
+        try {
+            assignmentsData = await listAssignments();
+            console.log('Fetched assignments:', assignmentsData);
+        } catch (err) {
+            console.error('Error fetching assignments:', err);
+            throw new Error('Failed to load assignments');
+        }
+
+        try {
+            studentsData = await listStudents();
+            console.log('Fetched students:', studentsData);
+        } catch (err) {
+            console.error('Error fetching students:', err);
+            throw new Error('Failed to load students');
+        }
+
+        try {
+            submissionsData = await getAllSubmissions();
+            console.log('Fetched submissions:', submissionsData);
+        } catch (err) {
+            console.error('Error fetching submissions:', err);
+            throw new Error('Failed to load submissions');
+        }
+
+        // Validate and filter data
+        const validCourses = coursesData.filter(c => {
+            const isValid = c && c.courseId;
+            if (!isValid) {
+                console.log('Invalid course:', c);
+            }
+            return isValid;
+        });
+
+        const validAssignments = assignmentsData.filter(a => {
+            const isValid = a && (a.assignmentId || a.id) && a.courseId;
+            if (!isValid) {
+                console.log('Invalid assignment:', a);
+            }
+            return isValid;
+        }).map(a => ({
+            ...a,
+            assignmentId: a.assignmentId || a.id,
+            assignmentName: a.assignmentName || a.name || `Assignment ${a.assignmentId || a.id}`,
+            weight: a.weight || 0
+        }));
+
+        const validStudents = studentsData.filter(s => {
+            const isValid = s && s.studentId;
+            if (!isValid) {
+                console.log('Invalid student:', s);
+            }
+            return isValid;
+        });
+
+        const validSubmissions = submissionsData.filter(s => {
+            const isValid = s && s.studentId && s.assignmentId && s.courseId;
+            if (!isValid) {
+                console.log('Invalid submission:', s);
+            }
+            return isValid;
+        });
+
+        console.log('Validated data:', {
+            courses: validCourses,
+            assignments: validAssignments,
+            students: validStudents,
+            submissions: validSubmissions
+        });
+
+        if (validCourses.length === 0) {
+            throw new Error('No valid courses found');
+        }
+
+        setCourses(validCourses);
+        setAssignments(validAssignments);
+        setStudents(validStudents);
+        setSubmissions(validSubmissions);
 
     } catch (err) {
-      console.error("Error fetching initial data:", err);
-      setError("Failed to load data.");
-      setIsLoading(false);
+        console.error("Error fetching initial data:", err);
+        setError(err.message || "Failed to load data. Please try refreshing the page.");
+    } finally {
+        setIsLoading(false);
     }
-  }, []);
+}, []);
 
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
 
   const processedGrades = useMemo(() => {
-    if (!selectedCourse || !students?.length || !assignments?.length || !submissions) {
-      if (!selectedCourse) setStats({ average: 0, submissionRate: 0, median: 0, failingPercentage: 0 });
-      return [];
-    }
-
-    const courseAssignments = assignments.filter(a => String(a.courseId) === String(selectedCourse));
-    const enrolledStudents = students.filter(s =>
-        Array.isArray(s.enrolledCourses) && s.enrolledCourses.some(cId => String(cId) === String(selectedCourse))
-    );
-
-    if (enrolledStudents.length === 0 || courseAssignments.length === 0) {
+    if (!selectedCourse) {
         setStats({ average: 0, submissionRate: 0, median: 0, failingPercentage: 0 });
         return [];
     }
 
     try {
-      // --- CORRECTED studentMap creation ---
-      const studentMap = new Map(students.map(s => {
-        const id = String(s?.studentId);
-        let name = '';
-        const first = (s?.firstName || '').trim();
-        const last = (s?.lastName || '').trim();
-        if (first || last) { name = `${first} ${last}`.trim(); }
-        return [id, name || undefined];
-      }));
-      // --- END CORRECTION ---
+        console.log('Processing grades for course:', selectedCourse);
+        console.log('All assignments:', assignments);
+        console.log('All students:', students);
+        console.log('All submissions:', submissions);
+        
+        // Get course assignments - simplified filtering
+        const courseAssignments = assignments.filter(a => {
+            const isValid = a && a.courseId && String(a.courseId) === String(selectedCourse);
+            if (!isValid) {
+                console.log('Invalid assignment:', a);
+            }
+            return isValid;
+        });
+        console.log('Course assignments:', courseAssignments);
 
-      const assignmentMap = new Map(assignments.map(a => [String(a.assignmentCode), { name: a.assignmentName, weight: a.weight }]));
+        // Get enrolled students - simplified filtering
+        const enrolledStudents = students.filter(s => {
+            const isValid = s && s.studentId && 
+                Array.isArray(s.enrolledCourses) && 
+                s.enrolledCourses.some(cId => String(cId) === String(selectedCourse));
+            if (!isValid) {
+                console.log('Invalid student:', s);
+            }
+            return isValid;
+        });
+        console.log('Enrolled students:', enrolledStudents);
 
-      const submissionMap = new Map();
-      submissions.forEach(sub => {
-          if (sub && sub.studentId != null && sub.assignmentCode != null) {
-              const key = `${String(sub.studentId)}-${String(sub.assignmentCode)}`;
-              submissionMap.set(key, sub);
-          }
-      });
-
-      const combinedData = [];
-
-      for (const student of enrolledStudents) {
-        const studentIdStr = String(student.studentId);
-
-        for (const assignment of courseAssignments) {
-          const assignmentCodeStr = String(assignment.assignmentCode);
-          const assignmentDetails = assignmentMap.get(assignmentCodeStr);
-
-          if (selectedAssignment && assignmentCodeStr !== String(selectedAssignment)) {
-            continue;
-          }
-
-          const submissionKey = `${studentIdStr}-${assignmentCodeStr}`;
-          const submission = submissionMap.get(submissionKey);
-
-          let status = STATUS_NO_SUBMISSION;
-          let grade = null;
-          let comments = '';
-
-          if (submission) {
-              const rawGradeValue = submission.grade;
-              if (rawGradeValue !== null && rawGradeValue !== undefined && rawGradeValue !== '' && !isNaN(Number(rawGradeValue))) {
-                  grade = Number(rawGradeValue);
-                  status = STATUS_GRADED;
-              } else {
-                  grade = null;
-                  status = STATUS_PENDING;
-              }
-              comments = submission.comments ?? '';
-          } else {
-              status = STATUS_NO_SUBMISSION;
-              grade = null;
-              comments = '';
-          }
-
-          const gradeRecord = {
-            studentId: studentIdStr,
-            // Use the corrected map, fallback to 'Unknown Student' if map returns undefined
-            studentName: studentMap.get(studentIdStr) || 'Unknown Student',
-            courseId: String(selectedCourse),
-            assignmentCode: assignmentCodeStr,
-            assignmentName: assignmentDetails?.name || 'Unknown Assignment',
-            assignmentWeight: assignmentDetails?.weight,
-            submissionStatus: status,
-            grade: grade,
-            comments: comments,
-          };
-
-          const searchTermLower = searchTerm.toLowerCase();
-          const nameMatch = !searchTerm ||
-                            gradeRecord.studentName.toLowerCase().includes(searchTermLower) ||
-                            gradeRecord.studentId.includes(searchTermLower);
-
-          let statusMatch = true;
-          if (statusFilter) {
-              if (statusFilter === STATUS_GRADED) { statusMatch = (gradeRecord.submissionStatus === STATUS_GRADED); }
-              else if (statusFilter === STATUS_PENDING) { statusMatch = (gradeRecord.submissionStatus === STATUS_PENDING); }
-              else if (statusFilter === STATUS_NO_SUBMISSION) { statusMatch = (gradeRecord.submissionStatus === STATUS_NO_SUBMISSION); }
-          }
-
-          if (nameMatch && statusMatch) {
-            combinedData.push(gradeRecord);
-          }
+        if (enrolledStudents.length === 0 || courseAssignments.length === 0) {
+            console.log('No students or assignments found for course');
+            setStats({ average: 0, submissionRate: 0, median: 0, failingPercentage: 0 });
+            return [];
         }
-      }
 
-      let totalGradesCount = 0;
-      let gradeSum = 0;
-      let submittedOrGradedCount = 0;
-      const gradesArray = [];
-      let failingCount = 0;
+        const combinedData = [];
 
-      combinedData.forEach(item => {
-          if (item.grade !== null) {
-              const numericGrade = item.grade;
-              gradeSum += numericGrade;
-              totalGradesCount++;
-              gradesArray.push(numericGrade);
-              if (numericGrade < FAILING_THRESHOLD) { failingCount++; }
-          }
-          if (item.submissionStatus === STATUS_GRADED || item.submissionStatus === STATUS_PENDING) { submittedOrGradedCount++; }
-      });
+        // Create a simple mapping of student names
+        const studentNames = new Map(
+            enrolledStudents.map(s => [
+                String(s.studentId),
+                `${(s.firstName || '').trim()} ${(s.lastName || '').trim()}`.trim() || 'Unknown Student'
+            ])
+        );
 
-      let median = 0;
-      if (gradesArray.length > 0) {
-          gradesArray.sort((a, b) => a - b);
-          const mid = Math.floor(gradesArray.length / 2);
-          median = gradesArray.length % 2 !== 0 ? gradesArray[mid] : (gradesArray[mid - 1] + gradesArray[mid]) / 2;
-      }
+        // Process each student and assignment combination
+        for (const student of enrolledStudents) {
+            const studentId = String(student.studentId);
 
-      const avg = totalGradesCount > 0 ? (gradeSum / totalGradesCount).toFixed(1) : 0;
-      const totalPossibleSubmissionsInView = combinedData.length;
-      const subRate = totalPossibleSubmissionsInView > 0 ? ((submittedOrGradedCount / totalPossibleSubmissionsInView) * 100).toFixed(0) : 0;
-      const failRate = totalGradesCount > 0 ? ((failingCount / totalGradesCount) * 100).toFixed(0) : 0;
+            for (const assignment of courseAssignments) {
+                const assignmentId = assignment.assignmentId;
 
-      setStats({ average: avg, submissionRate: subRate, median: median.toFixed(1), failingPercentage: failRate });
+                // Skip if specific assignment is selected and this isn't it
+                if (selectedAssignment && String(assignmentId) !== String(selectedAssignment)) {
+                    continue;
+                }
 
-       combinedData.sort((a, b) => {
-           let valA = a[orderBy];
-           let valB = b[orderBy];
+                // Find submission if exists
+                const submission = submissions.find(s => 
+                    String(s.studentId) === studentId && 
+                    String(s.assignmentId) === String(assignmentId) &&
+                    String(s.courseId) === String(selectedCourse)
+                );
 
-           if (orderBy === 'grade') {
-               valA = valA === null ? (order === 'asc' ? Infinity : -Infinity) : Number(valA);
-               valB = valB === null ? (order === 'asc' ? Infinity : -Infinity) : Number(valB);
-           } else if (orderBy === 'assignmentWeight') {
-               valA = valA === null || valA === undefined ? (order === 'asc' ? Infinity : -Infinity) : Number(valA);
-               valB = valB === null || valB === undefined ? (order === 'asc' ? Infinity : -Infinity) : Number(valB);
-           } else {
-               valA = String(valA ?? '').toLowerCase();
-               valB = String(valB ?? '').toLowerCase();
-           }
+                // Create grade record
+                const gradeRecord = {
+                    studentId: studentId,
+                    studentName: studentNames.get(studentId) || 'Unknown Student',
+                    courseId: String(selectedCourse),
+                    assignmentId: String(assignmentId),
+                    assignmentName: assignment.assignmentName || `Assignment ${assignmentId}`,
+                    assignmentWeight: assignment.weight || 0,
+                    submissionStatus: submission ? (submission.grade !== null ? STATUS_GRADED : STATUS_PENDING) : STATUS_NO_SUBMISSION,
+                    grade: submission?.grade ?? null,
+                    comments: submission?.comments ?? '',
+                };
 
-           if (valA < valB) return order === 'asc' ? -1 : 1;
-           if (valA > valB) return order === 'asc' ? 1 : -1;
-           return 0;
-       });
+                // Apply filters
+                const searchTermLower = searchTerm.toLowerCase();
+                const nameMatch = !searchTerm ||
+                                gradeRecord.studentName.toLowerCase().includes(searchTermLower) ||
+                                gradeRecord.studentId.includes(searchTermLower);
 
-      return combinedData;
+                const statusMatch = !statusFilter || gradeRecord.submissionStatus === statusFilter;
 
-    } catch (processingError) {
-        console.error("Error processing grades data:", processingError);
-        setError("Error processing data for display.");
+                if (nameMatch && statusMatch) {
+                    combinedData.push(gradeRecord);
+                }
+            }
+        }
+
+        console.log('Combined data:', combinedData);
+
+        // Calculate statistics
+        const grades = combinedData.filter(item => item.grade !== null).map(item => item.grade);
+        const totalGrades = grades.length;
+        const gradeSum = grades.reduce((sum, grade) => sum + grade, 0);
+        const submittedCount = combinedData.filter(item => 
+            item.submissionStatus === STATUS_GRADED || item.submissionStatus === STATUS_PENDING
+        ).length;
+
+        const stats = {
+            average: totalGrades > 0 ? (gradeSum / totalGrades).toFixed(1) : 0,
+            submissionRate: combinedData.length > 0 ? ((submittedCount / combinedData.length) * 100).toFixed(0) : 0,
+            median: totalGrades > 0 ? calculateMedian(grades).toFixed(1) : 0,
+            failingPercentage: totalGrades > 0 ? 
+                ((grades.filter(g => g < FAILING_THRESHOLD).length / totalGrades) * 100).toFixed(0) : 0
+        };
+
+        console.log('Calculated stats:', stats);
+        setStats(stats);
+        return combinedData;
+
+    } catch (error) {
+        console.error("Error processing grades:", error);
+        console.error("Error details:", {
+            selectedCourse,
+            assignmentsCount: assignments?.length,
+            studentsCount: students?.length,
+            submissionsCount: submissions?.length
+        });
+        setError("Error processing grades data. Please try refreshing the page.");
         setStats({ average: 0, submissionRate: 0, median: 0, failingPercentage: 0 });
         return [];
     }
-
-  }, [selectedCourse, selectedAssignment, searchTerm, statusFilter, students, assignments, submissions, order, orderBy]);
-
+}, [selectedCourse, selectedAssignment, searchTerm, statusFilter, students, assignments, submissions]);
 
   useEffect(() => {
       if (selectedCourse) {
@@ -310,7 +385,13 @@ export default function GradesManagement() {
   };
 
   const handleStartEdit = (item) => {
-    setEditingCellKey(`${item.studentId}-${item.assignmentCode}`);
+    // Store the complete item data for editing
+    const editKey = JSON.stringify({
+        studentId: item.studentId,
+        assignmentId: item.assignmentId,
+        courseId: item.courseId
+    });
+    setEditingCellKey(editKey);
     setEditGradeValue(item.grade ?? '');
     setEditCommentValue(item.comments ?? '');
   };
@@ -324,7 +405,12 @@ export default function GradesManagement() {
   const handleSaveInlineEdit = () => {
     if (!editingCellKey) return;
 
-    const [studentId, assignmentCode] = editingCellKey.split('-');
+    // Parse the stored item data
+    const itemData = JSON.parse(editingCellKey);
+    const { studentId: originalStudentId, assignmentId: originalAssignmentId, courseId: originalCourseId } = itemData;
+
+    console.log('Original item data:', itemData);
+
     const gradeToSave = editGradeValue === '' ? null : Number(editGradeValue);
     const commentToSave = editCommentValue.trim();
 
@@ -333,75 +419,50 @@ export default function GradesManagement() {
         return;
     }
 
-    const existingSubmissionIndex = submissions.findIndex(sub => String(sub.studentId) === studentId && String(sub.assignmentCode) === assignmentCode);
-    const existingSubmission = existingSubmissionIndex > -1 ? submissions[existingSubmissionIndex] : null;
-
-    let newStatus;
-    if (gradeToSave !== null) { newStatus = STATUS_GRADED; }
-    else if (existingSubmission || commentToSave) { newStatus = STATUS_PENDING; }
-    else { newStatus = STATUS_NO_SUBMISSION; }
-
-    const originalGrade = existingSubmission?.grade ?? null;
-    const originalComment = existingSubmission?.comments ?? '';
-    if (gradeToSave === originalGrade && commentToSave === originalComment) {
-        setSnackbar({ open: true, message: 'No changes detected.', severity: 'info' });
-        handleCancelEdit();
-        return;
-    }
-
     handleSaveGrade({
-        studentId: studentId,
-        assignmentCode: assignmentCode,
+        studentId: originalStudentId,
+        assignmentId: originalAssignmentId,
+        courseId: originalCourseId,
         grade: gradeToSave,
-        comments: commentToSave,
-        courseId: selectedCourse,
-        status: newStatus,
-        existingSubmission: existingSubmission,
-        existingSubmissionIndex: existingSubmissionIndex
+        comments: commentToSave
     });
   };
 
-  const handleSaveGrade = (saveData) => {
-    const { studentId, assignmentCode, grade, comments, courseId, status, existingSubmission, existingSubmissionIndex } = saveData;
+  const handleSaveGrade = async (saveData) => {
+    const { studentId: saveStudentId, assignmentId: saveAssignmentId, courseId: saveCourseId, grade: saveGrade, comments: saveComments } = saveData;
+    console.log('Saving with exact data:', saveData);
 
-    if (grade !== null && (isNaN(Number(grade)) || Number(grade) < 0 || Number(grade) > 100)) {
+    if (saveGrade !== null && (isNaN(Number(saveGrade)) || Number(saveGrade) < 0 || Number(saveGrade) > 100)) {
         setSnackbar({ open: true, message: 'Invalid grade value during save.', severity: 'error' });
         handleCancelEdit();
         return;
     }
 
-    let finalSubmissions;
-    const isSubmitted = status === STATUS_GRADED || status === STATUS_PENDING;
-
-    if (existingSubmissionIndex > -1) {
-        finalSubmissions = submissions.map((sub, index) =>
-            index === existingSubmissionIndex
-                ? { ...sub, grade: grade, comments: comments, submitted: isSubmitted, status: status }
-                : sub
-        );
-    } else {
-        if (grade !== null || comments) {
-            const newSubmission = {
-                studentId: studentId,
-                courseId: courseId,
-                assignmentCode: assignmentCode,
-                submitted: isSubmitted,
-                grade: grade,
-                comments: comments,
-                status: status,
-                submissionDate: new Date().toISOString().split('T')[0]
-            };
-            finalSubmissions = [...submissions, newSubmission];
-        } else {
-             setSnackbar({ open: true, message: 'Cannot save empty grade/comment for a non-submitted assignment.', severity: 'warning' });
-             handleCancelEdit();
-             return;
-        }
-    }
-
     try {
-        localStorage.setItem(SUBMISSIONS_STORAGE_KEY, JSON.stringify(finalSubmissions));
-        setSubmissions(finalSubmissions);
+        // Create submission ID using the exact original data
+        const submissionId = `${saveStudentId}_${saveCourseId}_${saveAssignmentId}`;
+        console.log('Using exact submission ID:', submissionId);
+
+        const submissionRef = doc(firestore, 'submissions', submissionId);
+
+        const isSubmitted = saveGrade !== null || saveComments;
+        const submissionData = {
+            studentId: saveStudentId,
+            courseId: saveCourseId,
+            assignmentId: saveAssignmentId,
+            grade: saveGrade !== null ? Number(saveGrade) : null,
+            comments: saveComments || '',
+            submitted: isSubmitted,
+            submissionDate: new Date().toISOString().split('T')[0]
+        };
+
+        console.log('Saving exact submission data:', submissionData);
+
+        await setDoc(submissionRef, submissionData, { merge: true });
+
+        // Refresh submissions data
+        const updatedSubmissions = await getAllSubmissions();
+        setSubmissions(updatedSubmissions);
         setSnackbar({ open: true, message: 'Grade/Comment updated successfully!', severity: 'success' });
         handleCancelEdit();
     } catch (saveError) {
@@ -525,13 +586,16 @@ export default function GradesManagement() {
               <Select value={selectedAssignment} label="Select Assignment" onChange={handleAssignmentChange}>
                 <MenuItem value=""><em>All Assignments</em></MenuItem>
                 {assignments
-                    .filter(a => String(a.courseId) === String(selectedCourse))
-                    .sort((a, b) => a.assignmentName.localeCompare(b.assignmentName))
-                    .map((assign) => (
-                      <MenuItem key={assign.assignmentCode} value={assign.assignmentCode}>
-                        {assign.assignmentName} ({assign.assignmentCode})
-                      </MenuItem>
-                 ))}
+                  .filter(a => a && a.courseId && String(a.courseId) === String(selectedCourse))
+                  .sort((a, b) => a.assignmentName.localeCompare(b.assignmentName))
+                  .map((assign) => (
+                    <MenuItem 
+                      key={`${assign.courseId}_${assign.assignmentId}`} 
+                      value={assign.assignmentId}
+                    >
+                      {assign.assignmentName} ({assign.assignmentId})
+                    </MenuItem>
+                  ))}
               </Select>
             </FormControl>
           </Grid>
@@ -588,7 +652,11 @@ export default function GradesManagement() {
                  <TableRow><TableCell colSpan={tableColSpan} align="center" sx={{ py: 4 }}><Typography>No grade records found for the selected criteria.</Typography></TableCell></TableRow>
               ) : (
                 paginatedRows.map((item) => {
-                  const itemKey = `${item.studentId}-${item.assignmentCode}`;
+                  const itemKey = JSON.stringify({
+                      studentId: item.studentId,
+                      assignmentId: item.assignmentId,
+                      courseId: item.courseId
+                  });
                   const isEditing = editingCellKey === itemKey;
                   return (
                     <TableRow key={itemKey} hover sx={{ backgroundColor: isEditing ? 'action.hover' : 'inherit' }}>

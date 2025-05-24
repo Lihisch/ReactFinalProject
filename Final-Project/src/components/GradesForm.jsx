@@ -8,6 +8,10 @@ import {
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import SaveIcon from '@mui/icons-material/Save';
+import { saveSubmission, getSubmissionsByCourseAndAssignment } from '../firebase/grades';
+import { listCourses } from '../firebase/courses';
+import { listAssignments } from '../firebase/assignments';
+import { listStudents } from '../firebase/students';
 
 const colors = {
   green: '#bed630',
@@ -33,7 +37,7 @@ export default function GradesForm() {
   const initialStateFromNav = location.state || {};
 
   const [selectedCourseCode, setSelectedCourseCode] = useState(initialStateFromNav.courseId || '');
-  const [selectedAssignmentCode, setSelectedAssignmentCode] = useState(initialStateFromNav.assignmentCode || '');
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState(initialStateFromNav.assignmentId || '');
 
   const [courseOptions, setCourseOptions] = useState([]);
   const [assignmentOptions, setAssignmentOptions] = useState([]);
@@ -58,83 +62,101 @@ export default function GradesForm() {
   };
 
   useEffect(() => {
-    setLoading(prev => ({ ...prev, courses: true }));
-    try {
-      const storedCourses = safeJsonParse(COURSES_STORAGE_KEY);
-      setCourseOptions(storedCourses);
-    } catch (error) { setSnackbar({ open: true, message: 'Error loading courses.', severity: 'error' }); }
-    finally { setLoading(prev => ({ ...prev, courses: false })); }
+    const fetchCourses = async () => {
+      setLoading(prev => ({ ...prev, courses: true }));
+      try {
+        const coursesData = await listCourses();
+        setCourseOptions(coursesData);
+      } catch (error) {
+        console.error("Error loading courses:", error);
+        setSnackbar({ open: true, message: 'Error loading courses.', severity: 'error' });
+      } finally {
+        setLoading(prev => ({ ...prev, courses: false }));
+      }
+    };
+
+    fetchCourses();
   }, []);
 
   useEffect(() => {
-    if (!selectedCourseCode) {
+    const fetchAssignmentsAndStudents = async () => {
+      if (!selectedCourseCode) {
+        setAssignmentOptions([]);
+        setStudentsToGrade([]);
+        setGrades({});
+        setErrors({});
+        return;
+      }
+
+      setLoading(prev => ({ ...prev, assignments: true, students: true }));
       setAssignmentOptions([]);
       setStudentsToGrade([]);
-      setGrades({}); setErrors({}); return;
-    }
+      setGrades({});
+      setErrors({});
 
-    setLoading(prev => ({ ...prev, assignments: true, students: true }));
-    setAssignmentOptions([]); setStudentsToGrade([]);
-    setGrades({}); setErrors({});
+      try {
+        const [assignmentsData, studentsData] = await Promise.all([
+          listAssignments(),
+          listStudents()
+        ]);
 
-    let fetchedAssignments = []; let fetchedStudents = [];
-    try {
-      const allAssignments = safeJsonParse(ASSIGNMENTS_STORAGE_KEY);
-      fetchedAssignments = allAssignments.filter(assign => assign && String(assign.courseId || assign.courseCode) === String(selectedCourseCode));
-      const allStudents = safeJsonParse(STUDENTS_STORAGE_KEY);
-      fetchedStudents = allStudents.filter(student =>
-        student && student.studentId && Array.isArray(student.enrolledCourses) && student.enrolledCourses.some(id => id != null && String(id) === String(selectedCourseCode))
-      );
-    } catch (error) { setSnackbar({ open: true, message: 'Error loading assignments or students.', severity: 'error' }); }
-    finally {
-      setAssignmentOptions(fetchedAssignments);
-      setStudentsToGrade(fetchedStudents);
-      setLoading(prev => ({ ...prev, assignments: false, students: false }));
-    }
+        const filteredAssignments = assignmentsData.filter(
+          assign => assign && String(assign.courseId) === String(selectedCourseCode)
+        );
+
+        const filteredStudents = studentsData.filter(student =>
+          student && student.studentId && 
+          Array.isArray(student.enrolledCourses) && 
+          student.enrolledCourses.some(id => String(id) === String(selectedCourseCode))
+        );
+
+        setAssignmentOptions(filteredAssignments);
+        setStudentsToGrade(filteredStudents);
+      } catch (error) {
+        console.error("Error loading assignments or students:", error);
+        setSnackbar({ open: true, message: 'Error loading assignments or students.', severity: 'error' });
+      } finally {
+        setLoading(prev => ({ ...prev, assignments: false, students: false }));
+      }
+    };
+
+    fetchAssignmentsAndStudents();
   }, [selectedCourseCode]);
 
-
-  const fetchExistingGrades = useCallback(() => {
-    if (!selectedCourseCode || !selectedAssignmentCode) {
+  const fetchExistingGrades = useCallback(async () => {
+    if (!selectedCourseCode || !selectedAssignmentId) {
       setGrades({});
       return;
     }
     try {
-        const allSubmissions = safeJsonParse(SUBMISSIONS_STORAGE_KEY);
-        const relevantSubmissions = allSubmissions.filter(
-            (sub) => sub &&
-                     String(sub.courseId || sub.courseCode) === String(selectedCourseCode) &&
-                     String(sub.assignmentCode) === String(selectedAssignmentCode)
-        );
-
-        const initialGradesState = relevantSubmissions.reduce((acc, submissionRecord) => {
-            if (submissionRecord && submissionRecord.studentId) {
-                acc[String(submissionRecord.studentId)] = submissionRecord.grade ?? '';
-            }
-            return acc;
-        }, {});
-        setGrades(initialGradesState);
-        setErrors({});
+      const relevantSubmissions = await getSubmissionsByCourseAndAssignment(selectedCourseCode, selectedAssignmentId);
+      const initialGradesState = relevantSubmissions.reduce((acc, submissionRecord) => {
+        if (submissionRecord && submissionRecord.studentId) {
+          acc[String(submissionRecord.studentId)] = submissionRecord.grade ?? '';
+        }
+        return acc;
+      }, {});
+      setGrades(initialGradesState);
+      setErrors({});
     } catch (error) {
-        console.error("Error loading existing grades from submissions:", error);
-        setSnackbar({ open: true, message: 'Error loading existing grades.', severity: 'error' });
+      console.error("Error loading existing grades from submissions:", error);
+      setSnackbar({ open: true, message: 'Error loading existing grades.', severity: 'error' });
     }
-  }, [selectedCourseCode, selectedAssignmentCode]);
+  }, [selectedCourseCode, selectedAssignmentId]);
 
   useEffect(() => { fetchExistingGrades(); }, [fetchExistingGrades]);
-
 
   const handleCourseChange = (event) => {
     const newCourseCode = event.target.value;
     setSelectedCourseCode(newCourseCode);
     if (newCourseCode !== selectedCourseCode) {
-        setSelectedAssignmentCode('');
+        setSelectedAssignmentId('');
     }
     setErrors({});
   };
 
   const handleAssignmentChange = (event) => {
-    setSelectedAssignmentCode(event.target.value);
+    setSelectedAssignmentId(event.target.value);
     setErrors({});
   };
 
@@ -149,11 +171,11 @@ export default function GradesForm() {
     }
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setErrors({});
 
-    if (!selectedCourseCode || !selectedAssignmentCode) {
+    if (!selectedCourseCode || !selectedAssignmentId) {
       setErrors({ form: 'Please select both a course and an assignment.' });
       setSnackbar({ open: true, message: 'Course and Assignment selection required.', severity: 'warning' });
       return;
@@ -166,48 +188,31 @@ export default function GradesForm() {
     }
 
     try {
-      let allSubmissions = safeJsonParse(SUBMISSIONS_STORAGE_KEY);
-
-      studentsToGrade.forEach(student => {
+      const savePromises = studentsToGrade.map(async student => {
         const studentIdStr = String(student.studentId);
         const gradeValue = grades[studentIdStr];
         const gradeToSave = (gradeValue === null || gradeValue === undefined || gradeValue === '') ? null : Number(gradeValue);
 
-        const existingIndex = allSubmissions.findIndex(sub =>
-            sub &&
-            String(sub.studentId) === studentIdStr &&
-            String(sub.assignmentCode) === String(selectedAssignmentCode) &&
-            String(sub.courseId || sub.courseCode) === String(selectedCourseCode)
-        );
+        const newStatus = gradeToSave !== null ? STATUS_GRADED : STATUS_PENDING;
+        const isSubmitted = gradeToSave !== null;
 
-        const newStatus = gradeToSave !== null ? STATUS_GRADED : (existingIndex > -1 ? STATUS_PENDING : STATUS_NO_SUBMISSION);
-        const isSubmitted = (existingIndex > -1 && allSubmissions[existingIndex].submitted) || (gradeToSave !== null);
+        if (gradeToSave !== null) {
+          const submissionData = {
+            courseId: selectedCourseCode,
+            assignmentId: selectedAssignmentId,
+            studentId: studentIdStr,
+            grade: gradeToSave,
+            comments: '',
+            submitted: isSubmitted,
+            status: newStatus,
+            submissionDate: new Date().toISOString().split('T')[0]
+          };
 
-        if (existingIndex > -1) {
-          allSubmissions[existingIndex] = {
-              ...allSubmissions[existingIndex],
-              grade: gradeToSave,
-              submitted: isSubmitted,
-              status: newStatus,
-              lastUpdated: new Date().toISOString()
-          };
-        } else if (gradeToSave !== null) {
-          const newSubmission = {
-              courseId: selectedCourseCode,
-              assignmentCode: selectedAssignmentCode,
-              studentId: studentIdStr,
-              grade: gradeToSave,
-              comments: '',
-              submitted: true,
-              status: STATUS_GRADED,
-              submissionDate: new Date().toISOString().split('T')[0],
-              lastUpdated: new Date().toISOString()
-          };
-          allSubmissions.push(newSubmission);
+          await saveSubmission(submissionData);
         }
       });
 
-      localStorage.setItem(SUBMISSIONS_STORAGE_KEY, JSON.stringify(allSubmissions));
+      await Promise.all(savePromises);
       setSnackbar({ open: true, message: 'Grades saved successfully!', severity: 'success' });
 
     } catch (error) {
@@ -215,7 +220,6 @@ export default function GradesForm() {
       setSnackbar({ open: true, message: 'An error occurred while saving grades.', severity: 'error' });
     }
   };
-
 
   const handleCloseSnackbar = (event, reason) => {
     if (reason === 'clickaway') return;
@@ -247,20 +251,20 @@ export default function GradesForm() {
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth required disabled={!selectedCourseCode || loading.assignments || assignmentOptions.length === 0} error={!selectedAssignmentCode && !!errors.form}>
+            <FormControl fullWidth required disabled={!selectedCourseCode || loading.assignments || assignmentOptions.length === 0} error={!selectedAssignmentId && !!errors.form}>
               <InputLabel>Select Assignment</InputLabel>
-              <Select name="assignmentCode" value={selectedAssignmentCode} label="Select Assignment" onChange={handleAssignmentChange} >
+              <Select name="assignmentId" value={selectedAssignmentId} label="Select Assignment" onChange={handleAssignmentChange} >
                 <MenuItem value="" disabled><em>{loading.assignments ? 'Loading...' : (assignmentOptions.length === 0 && selectedCourseCode ? 'No assignments' : 'Select Assignment')}</em></MenuItem>
-                {assignmentOptions.map((assign) => ( <MenuItem key={assign.assignmentCode} value={assign.assignmentCode}> {assign.assignmentCode} - {assign.assignmentName} </MenuItem> ))}
+                {assignmentOptions.map((assign) => ( <MenuItem key={assign.assignmentId} value={assign.assignmentId}> {assign.assignmentId} - {assign.assignmentName} </MenuItem> ))}
               </Select>
-              {!selectedAssignmentCode && errors.form && <FormHelperText error>{errors.form}</FormHelperText>}
+              {!selectedAssignmentId && errors.form && <FormHelperText error>{errors.form}</FormHelperText>}
             </FormControl>
           </Grid>
 
           <Grid item xs={12}>
             {loading.students ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}> <CircularProgress sx={{ color: colors.green }} /> </Box>
-            ) : studentsToGrade.length > 0 && selectedAssignmentCode ? (
+            ) : studentsToGrade.length > 0 && selectedAssignmentId ? (
               <Paper variant="outlined" sx={{ mt: 2 }}>
                 <Box sx={{ px: 2, py: 1, borderBottom: 1, borderColor: 'divider', backgroundColor: colors.lightGrey }}>
                   <Grid container spacing={2} alignItems="center">
@@ -282,12 +286,10 @@ export default function GradesForm() {
                     const studentIdStr = String(student.studentId);
                     return (
                       <ListItem key={studentIdStr} divider={index < studentsToGrade.length - 1}>
-                        {/* --- CORRECTED ListItemText --- */}
                         <ListItemText
                           primary={`${(student.firstName || '').trim()} ${(student.lastName || '').trim() || 'Unknown Student'} (${studentIdStr})`}
                           sx={{ flexBasis: '50%' }}
                         />
-                        {/* --- END CORRECTION --- */}
                         <TextField
                           size="small"
                           variant="outlined"
@@ -305,7 +307,7 @@ export default function GradesForm() {
                   })}
                 </List>
               </Paper>
-            ) : selectedCourseCode && selectedAssignmentCode ? (
+            ) : selectedCourseCode && selectedAssignmentId ? (
               <Typography sx={{ mt: 2, textAlign: 'center' }}>No students enrolled in this course to grade for this assignment.</Typography>
             ) : null }
           </Grid>
@@ -316,7 +318,7 @@ export default function GradesForm() {
               type="submit"
               size="large"
               startIcon={<SaveIcon />}
-              disabled={loading.students || studentsToGrade.length === 0 || !selectedAssignmentCode || Object.values(errors).some(e => typeof e === 'string' && e)}
+              disabled={loading.students || studentsToGrade.length === 0 || !selectedAssignmentId || Object.values(errors).some(e => typeof e === 'string' && e)}
               sx={{ backgroundColor: colors.green, color: colors.text, '&:hover': { backgroundColor: colors.greenDark } }}
             >
               Save Grades

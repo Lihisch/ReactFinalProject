@@ -12,6 +12,12 @@ import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
 import { addAssignment, updateAssignment, listAssignments } from '../firebase/assignments';
 import { listCourses } from '../firebase/courses';
+import { 
+  createSubmission, 
+  getSubmissionsByCourseAndAssignment,
+  updateSubmission,
+  deleteSubmission
+} from '../firebase/submissions';
 
 const colors = {
   green: '#bed630', greenDark: '#a7bc2a', text: '#000000', white: '#ffffff'
@@ -45,6 +51,11 @@ export default function AssignmentForm() {
   const [errors, setErrors] = useState({});
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [isLoading, setIsLoading] = useState(isEditMode || isCopyMode);
+  const [submissions, setSubmissions] = useState({});
+  const [selectedCourse, setSelectedCourse] = useState('');
+  const [selectedAssignment, setSelectedAssignment] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -102,6 +113,37 @@ export default function AssignmentForm() {
 
     loadData();
   }, [isEditMode, isCopyMode, assignmentId, originalAssignmentId, navigate]);
+
+  useEffect(() => {
+    const fetchExistingSubmissions = async () => {
+      if (selectedCourse && selectedAssignment) {
+        try {
+          const submissions = await getSubmissionsByCourseAndAssignment(
+            selectedCourse,
+            selectedAssignment
+          );
+          
+          // Process submissions to create initial state
+          const initialSubmissions = {};
+          submissions.forEach(submission => {
+            initialSubmissions[submission.studentId] = {
+              submitted: submission.submitted,
+              status: submission.status,
+              grade: submission.grade || '',
+              comments: submission.comments || ''
+            };
+          });
+          
+          setSubmissions(initialSubmissions);
+        } catch (error) {
+          console.error('Error fetching submissions:', error);
+          setError('Failed to fetch existing submissions');
+        }
+      }
+    };
+
+    fetchExistingSubmissions();
+  }, [selectedCourse, selectedAssignment]);
 
   const validate = () => {
     const temp = {};
@@ -168,13 +210,16 @@ export default function AssignmentForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setSuccess('');
+
     if (!validate()) {
       setSnackbar({ open: true, message: 'Please fix the errors in the form.', severity: 'error' });
       return;
     }
 
     try {
-      console.log('Submitting form data:', formData);
+      // First handle the assignment
       const assignmentData = {
         ...formData,
         weight: parseFloat(formData.weight),
@@ -185,20 +230,84 @@ export default function AssignmentForm() {
       };
 
       if (isEditMode) {
-        console.log('Updating assignment:', assignmentId, assignmentData);
         await updateAssignment(assignmentId, assignmentData);
         setSnackbar({ open: true, message: 'Assignment updated successfully!', severity: 'success' });
-        setTimeout(() => { navigate('/AssignmentsManagement'); }, 1500);
       } else {
-        console.log('Adding new assignment:', assignmentData);
         await addAssignment(assignmentData);
         setSnackbar({ open: true, message: 'Assignment added successfully!', severity: 'success' });
-        setTimeout(() => { navigate('/coursesmanagement'); }, 1500);
       }
 
+      // Then handle submissions if they exist
+      if (selectedCourse && selectedAssignment && Object.keys(submissions).length > 0) {
+        const submissionPromises = Object.entries(submissions).map(async ([studentId, data]) => {
+          const submissionData = {
+            studentId,
+            courseId: selectedCourse,
+            assignmentCode: selectedAssignment,
+            submitted: data.submitted,
+            status: data.status,
+            grade: data.grade,
+            comments: data.comments
+          };
+
+          if (data.submitted) {
+            await createSubmission(submissionData);
+          }
+        });
+
+        await Promise.all(submissionPromises);
+        setSuccess('Submissions saved successfully');
+      }
+
+      // Navigate after successful save
+      setTimeout(() => { 
+        navigate(isEditMode ? '/AssignmentsManagement' : '/coursesmanagement'); 
+      }, 1500);
     } catch (error) {
-      console.error("Error saving assignment:", error);
-      setSnackbar({ open: true, message: `Error saving assignment: ${error.message}`, severity: 'error' });
+      console.error("Error saving:", error);
+      setSnackbar({ 
+        open: true, 
+        message: `Error: ${error.message}`, 
+        severity: 'error' 
+      });
+    }
+  };
+
+  const handleDelete = async (studentId) => {
+    try {
+      const submissionId = `${studentId}_${selectedCourse}_${selectedAssignment}`;
+      await deleteSubmission(submissionId);
+      
+      setSubmissions(prev => {
+        const updated = { ...prev };
+        delete updated[studentId];
+        return updated;
+      });
+      
+      setSuccess('Submission deleted successfully');
+    } catch (error) {
+      console.error('Error deleting submission:', error);
+      setError('Failed to delete submission');
+    }
+  };
+
+  const handleUpdate = async (studentId, updatedData) => {
+    try {
+      const submissionId = `${studentId}_${selectedCourse}_${selectedAssignment}`;
+      await updateSubmission(submissionId, updatedData);
+      
+      setSubmissions(prev => ({
+        ...prev,
+        [studentId]: {
+          ...prev[studentId],
+          ...updatedData
+        }
+      }));
+      
+      setSuccess('Submission updated successfully');
+    } catch (error) {
+      console.error('Error updating submission:', error);
+      setError('Failed to update submission');
     }
   };
 
