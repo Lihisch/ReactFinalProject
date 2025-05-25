@@ -89,7 +89,7 @@ export const updateCourse = async (courseId, courseData) => {
   }
 };
 
-// Delete a course
+// Delete  course
 export const deleteCourses = async (courseIds) => {
   try {
     if (!Array.isArray(courseIds) || courseIds.length === 0) {
