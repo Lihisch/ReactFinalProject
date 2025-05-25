@@ -105,8 +105,8 @@ export default function GradesForm() {
         );
 
         const filteredStudents = studentsData.filter(student =>
-          student && student.studentId && 
-          Array.isArray(student.enrolledCourses) && 
+          student && student.studentId &&
+          Array.isArray(student.enrolledCourses) &&
           student.enrolledCourses.some(id => String(id) === String(selectedCourseCode))
         );
 
@@ -193,23 +193,20 @@ export default function GradesForm() {
         const gradeValue = grades[studentIdStr];
         const gradeToSave = (gradeValue === null || gradeValue === undefined || gradeValue === '') ? null : Number(gradeValue);
 
-        const newStatus = gradeToSave !== null ? STATUS_GRADED : STATUS_PENDING;
-        const isSubmitted = gradeToSave !== null;
+        const statusToSave = gradeToSave !== null ? STATUS_GRADED : STATUS_PENDING;
+        const submittedStatus = gradeToSave !== null;
 
-        if (gradeToSave !== null) {
-          const submissionData = {
-            courseId: selectedCourseCode,
-            assignmentId: selectedAssignmentId,
-            studentId: studentIdStr,
-            grade: gradeToSave,
-            comments: '',
-            submitted: isSubmitted,
-            status: newStatus,
-            submissionDate: new Date().toISOString().split('T')[0]
-          };
-
-          await saveSubmission(submissionData);
-        }
+        const submissionData = {
+          courseId: selectedCourseCode,
+          assignmentId: selectedAssignmentId,
+          studentId: studentIdStr,
+          grade: gradeToSave,
+          comments: '', // Assuming comments are handled elsewhere or default to empty
+          submitted: submittedStatus, // True if grade exists, false otherwise
+          status: statusToSave,
+          submissionDate: new Date().toISOString().split('T')[0] // Current date for submission/update
+        };
+        await saveSubmission(submissionData);
       });
 
       await Promise.all(savePromises);

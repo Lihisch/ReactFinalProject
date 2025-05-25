@@ -16,7 +16,7 @@ import {
 
 const SUBMISSIONS_COLLECTION = 'submissions';
 
-// Get all submissions
+// Get all submission
 export const getAllSubmissions = async () => {
   try {
     const querySnapshot = await getDocs(collection(firestore, SUBMISSIONS_COLLECTION));
@@ -145,7 +145,6 @@ export const updateSubmissionGrade = async (submissionId, grade) => {
     throw error;
   }
 };
-
 // Update submission comments
 export const updateSubmissionComment = async (submissionId, comments) => {
   try {
