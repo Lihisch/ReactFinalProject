@@ -4,14 +4,13 @@ import { useSearchParams, useNavigate, Link as RouterLink } from 'react-router-d
 import {
   Container, Box, Typography, Button, Grid, Snackbar, Alert, Breadcrumbs, Link as MuiLink,
   FormHelperText, FormGroup, FormControlLabel, Checkbox, FormLabel, FormControl,
-  List, ListItem, CircularProgress, Paper, alpha, Select, MenuItem, InputLabel // Added Select, MenuItem, InputLabel
+  List, ListItem, CircularProgress, Paper, alpha, Select, MenuItem, InputLabel
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import SchoolIcon from '@mui/icons-material/School';
 import SaveIcon from '@mui/icons-material/Save';
-
-const STUDENTS_STORAGE_KEY = 'students';
-const COURSES_STORAGE_KEY = 'courses';
+import { listStudents, updateStudent } from '../firebase/students';
+import { listCourses } from '../firebase/courses';
 
 const colors = {
   primaryGreenBase: '#bed630',
@@ -32,103 +31,64 @@ const isValidId = (id) => id != null && id !== '';
 export default function EnrollmentForm() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const studentIdFromUrl = searchParams.get('studentId'); // ID from URL if present
+  const studentIdFromUrl = searchParams.get('studentId');
 
-  const [allStudents, setAllStudents] = useState([]); // For general mode dropdown
+  const [allStudents, setAllStudents] = useState([]);
   const [allCourses, setAllCourses] = useState([]);
-  const [selectedStudentId, setSelectedStudentId] = useState(''); // Holds the ID of the student being managed (from URL or dropdown)
-  const [student, setStudent] = useState(null); // The actual student object being managed
+  const [selectedStudentId, setSelectedStudentId] = useState(studentIdFromUrl || '');
+  const [student, setStudent] = useState(null);
   const [selectedCourseIds, setSelectedCourseIds] = useState(new Set());
-  const [isLoading, setIsLoading] = useState(false); // Initially false, true only during data loading
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formError, setFormError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  const safeJsonParse = (key, defaultValue = []) => {
-    try {
-      const item = localStorage.getItem(key);
-      if (!item) return defaultValue;
-      const parsed = JSON.parse(item);
-      // Basic validation: ensure it's an array and filter invalid students if needed
-      if (Array.isArray(parsed)) {
-          if (key === STUDENTS_STORAGE_KEY) {
-              return parsed.filter(s => isValidId(s?.studentId)); // Ensure students have valid IDs
-          }
-          return parsed;
-      }
-      return defaultValue;
-    } catch (e) {
-      console.error(`Error parsing ${key} from localStorage`, e);
-      setError(`Failed to parse data for ${key}. Check console.`); // Set error state on parse failure
-      return defaultValue;
-    }
-  };
-
-  // Effect 1: Load initial data (all students and courses) and set initial selected student if ID comes from URL
+  // Load initial data
   useEffect(() => {
-    setIsLoading(true);
-    setError(null); // Reset error
-    try {
-        const students = safeJsonParse(STUDENTS_STORAGE_KEY);
-        const courses = safeJsonParse(COURSES_STORAGE_KEY);
-        setAllStudents(students);
-        setAllCourses(courses);
-
-        // If an ID came from the URL, set it as the selected student
-        if (isValidId(studentIdFromUrl)) {
-            console.log("EnrollmentForm: Initializing with studentId from URL:", studentIdFromUrl);
-            setSelectedStudentId(studentIdFromUrl);
-        } else {
-            console.log("EnrollmentForm: Initializing in general mode (no studentId from URL).");
-            setSelectedStudentId(''); // Ensure it's reset if URL ID is invalid/missing
-            setStudent(null); // Clear student object if no valid ID from URL
-            setSelectedCourseIds(new Set()); // Clear course selections
-        }
-    } catch (err) {
-        console.error("EnrollmentForm Error: Failed during initial data load:", err);
-        setError('Failed to load initial student or course data.');
-    } finally {
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const [studentsData, coursesData] = await Promise.all([
+          listStudents(),
+          listCourses()
+        ]);
+        setAllStudents(studentsData);
+        setAllCourses(coursesData);
+      } catch (err) {
+        console.error("Error loading data:", err);
+        setError("Failed to load data from Firebase.");
+      } finally {
         setIsLoading(false);
-    }
-  }, [studentIdFromUrl]); // Rerun if the ID from the URL changes
+      }
+    };
 
-  // Effect 2: Load specific student data and their courses *whenever* selectedStudentId changes (either from URL or dropdown)
+    fetchData();
+  }, []);
+
+  // Update selected student data when ID changes
   useEffect(() => {
-    // Only run if a valid student ID is selected
     if (isValidId(selectedStudentId)) {
-        setIsLoading(true); // Indicate loading specific student data
-        setError(null); // Reset previous errors
-        setStudent(null); // Reset student object before finding new one
-        setSelectedCourseIds(new Set()); // Reset course selections
-
-        console.log("EnrollmentForm: Loading data for selectedStudentId:", selectedStudentId);
-
-        const foundStudent = allStudents.find(s => String(s.studentId) === String(selectedStudentId));
-
-        if (foundStudent) {
-            setStudent(foundStudent);
-            // Initialize selected courses based on the found student's data
-            setSelectedCourseIds(new Set((foundStudent.enrolledCourses || []).map(String)));
-            console.log("EnrollmentForm: Student found and data set:", foundStudent);
-        } else {
-            // This case might happen if the ID from URL is invalid after initial load, or dropdown selection fails
-            console.error(`EnrollmentForm Error: Student with selected ID ${selectedStudentId} not found in loaded students.`);
-            setError(`Student with ID ${selectedStudentId} not found.`);
-            setSelectedStudentId(''); // Reset selection if student not found
-        }
-        setIsLoading(false); // Finish loading specific student data
+      setIsLoading(true);
+      const foundStudent = allStudents.find(s => String(s.studentId) === String(selectedStudentId));
+      
+      if (foundStudent) {
+        setStudent(foundStudent);
+        setSelectedCourseIds(new Set((foundStudent.enrolledCourses || []).map(String)));
+      } else {
+        console.error(`EnrollmentForm Error: Student with selected ID ${selectedStudentId} not found in loaded students.`);
+        setError(`Student with ID ${selectedStudentId} not found.`);
+        setSelectedStudentId('');
+      }
+      setIsLoading(false);
     } else {
-        // If no valid student is selected (e.g., in general mode before selection)
-        setStudent(null); // Ensure student object is null
-        setSelectedCourseIds(new Set()); // Ensure selections are cleared
+      setStudent(null);
+      setSelectedCourseIds(new Set());
     }
-  }, [selectedStudentId, allStudents]); // Rerun when the selected ID or the list of all students changes
+  }, [selectedStudentId, allStudents]);
 
-  // Handler for the student selection dropdown (General Mode)
   const handleStudentSelectChange = (event) => {
-    const newStudentId = event.target.value;
-    console.log("EnrollmentForm: Student selected from dropdown:", newStudentId);
-    setSelectedStudentId(newStudentId); // This will trigger Effect 2
+    setSelectedStudentId(event.target.value);
   };
 
   const handleCourseCheckboxChange = (event) => {
@@ -142,57 +102,28 @@ export default function EnrollmentForm() {
     if (formError) setFormError(null);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Check if a student is actually selected and loaded
-    if (!student || !isValidId(selectedStudentId)) {
-      setSnackbar({ open: true, message: 'Please select a student first.', severity: 'warning' });
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!isValidId(selectedStudentId) || !student) {
+      setFormError('Please select a student first.');
       return;
     }
 
     try {
-      // Use the currently selected student ID for saving
-      const currentStudentId = selectedStudentId;
-      const allStudentsData = safeJsonParse(STUDENTS_STORAGE_KEY); // Re-read fresh data for saving
-      const studentIndex = allStudentsData.findIndex(s => String(s?.studentId) === String(currentStudentId));
-
-      if (studentIndex === -1) {
-        setSnackbar({ open: true, message: 'Error finding student to update. Please refresh.', severity: 'error' });
-        return;
-      }
-
-      const currentEnrolledSet = new Set(allStudentsData[studentIndex]?.enrolledCourses?.map(String) || []);
-      const newSelectedArray = Array.from(selectedCourseIds);
-
-      const hasChanged = newSelectedArray.length !== currentEnrolledSet.size ||
-                         newSelectedArray.some(id => !currentEnrolledSet.has(id));
-
-      if (!hasChanged) {
-          setSnackbar({ open: true, message: 'No changes detected in enrollment.', severity: 'info' });
-          return;
-      }
-
-      const updatedStudents = allStudentsData.map((s, index) => {
-          if (index === studentIndex) {
-              return { ...s, enrolledCourses: newSelectedArray };
-          }
-          return s;
-      });
-
-      localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updatedStudents));
-      setSnackbar({ open: true, message: 'Enrollments updated successfully!', severity: 'success' });
-      // Update local state to reflect save
-      setStudent(prev => ({...prev, enrolledCourses: newSelectedArray}));
-      // Update the main students list state if needed (might cause re-renders)
-      // setAllStudents(updatedStudents);
-
+      const updatedEnrolledCourses = Array.from(selectedCourseIds);
+      await updateStudent(student.id, { enrolledCourses: updatedEnrolledCourses });
+      
+      setSnackbar({ open: true, message: 'Enrollment updated successfully!', severity: 'success' });
+      setTimeout(() => {
+        navigate('/studentsmanagement');
+      }, 1500);
     } catch (err) {
-      console.error("Error saving enrollments:", err);
-      setSnackbar({ open: true, message: 'Error saving enrollment. Please check console.', severity: 'error' });
+      console.error("Error updating enrollment:", err);
+      setSnackbar({ open: true, message: 'Error updating enrollment.', severity: 'error' });
     }
   };
 
-  const handleCloseSnackbar = (_, reason) => {
+  const handleCloseSnackbar = (event, reason) => {
     if (reason === 'clickaway') return;
     setSnackbar(prev => ({ ...prev, open: false }));
   };

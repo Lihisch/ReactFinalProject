@@ -25,6 +25,8 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import PersonRemoveIcon from '@mui/icons-material/PersonRemove';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import { listCourses, deleteCourses, addCourse } from '../firebase/courses';
+import { listStudents } from '../firebase/students';
 
 const STUDENTS_STORAGE_KEY = 'students';
 const COURSES_STORAGE_KEY = 'courses';
@@ -104,43 +106,42 @@ export default function CoursesManagement() {
 
   // useEffect for loading data on component mount
   useEffect(() => {
-    setLoading(true);
-    try {
-      // Load students (Keep this if needed for enrollment counts etc.)
-      const storedStudents = JSON.parse(localStorage.getItem(STUDENTS_STORAGE_KEY)) || [];
-      if (Array.isArray(storedStudents)) {
-        setStudents(storedStudents);
-      } else {
-        console.warn("LocalStorage: Invalid student data found.");
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Load data from Firebase
+        const [coursesData, studentsData] = await Promise.all([
+          listCourses(),
+          listStudents()
+        ]);
+
+        if (Array.isArray(coursesData)) {
+          setCourses(coursesData);
+        } else {
+          console.error("Firebase: Invalid course data received");
+          setCourses([]);
+          setSnackbar({ open: true, message: 'Error: Invalid course data format received.', severity: 'error' });
+        }
+
+        if (Array.isArray(studentsData)) {
+          setStudents(studentsData);
+        } else {
+          console.warn("Firebase: Invalid student data received");
+          setStudents([]);
+        }
+
+      } catch (error) {
+        console.error("CourseManagement: Error loading data from Firebase:", error);
+        setSnackbar({ open: true, message: 'Error loading data. Check console for details.', severity: 'error' });
         setStudents([]);
+        setCourses([]);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      // --- CORRECTED LOGIC FOR LOADING COURSES ---
-      const storedCoursesString = localStorage.getItem(COURSES_STORAGE_KEY);
-      // Try to parse if string exists, otherwise default to empty array
-      const parsedCourses = storedCoursesString ? JSON.parse(storedCoursesString) : [];
-
-      if (Array.isArray(parsedCourses)) {
-        setCourses(parsedCourses); // Set state directly with parsed data or empty array
-      } else {
-        // Handle case where data exists but is not an array (corrupted data)
-        console.error("LocalStorage: Invalid course data found. Expected an array.");
-        setCourses([]); // Set to empty array if data is invalid
-        setSnackbar({ open: true, message: 'Error: Invalid course data format found in storage.', severity: 'error' });
-      }
-      // --- END OF CORRECTED LOGIC ---
-
-    } catch (error) {
-      // Catch JSON parsing errors or other unexpected issues
-      console.error("CourseManagement: Error loading data from localStorage:", error);
-      setSnackbar({ open: true, message: 'Error loading data. Check console for details.', severity: 'error' });
-      setStudents([]); // Reset states on error
-      setCourses([]);
-    } finally {
-      setLoading(false); // Ensure loading state is always turned off
-    }
-  }, []); // Empty dependency array is correct, run only once on mount
-
+    fetchData();
+  }, []);
 
   const enrollmentCounts = useMemo(() => {
     const counts = {};
@@ -248,24 +249,14 @@ export default function CoursesManagement() {
   };
   const handleDeleteCancel = () => setDeleteConfirm({ open: false, courseId: null, courseName: '', isBulk: false, warning: '' });
 
-  const handleDeleteConfirm = useCallback(() => {
+  const handleDeleteConfirm = useCallback(async () => {
     const { courseId, isBulk } = deleteConfirm;
     const idsToDelete = isBulk ? selected : (courseId ? [courseId] : []);
     if (idsToDelete.length === 0) return;
+
     try {
-      const currentCourses = JSON.parse(localStorage.getItem(COURSES_STORAGE_KEY)) || [];
-      const currentStudents = JSON.parse(localStorage.getItem(STUDENTS_STORAGE_KEY)) || [];
-      const updatedCourses = currentCourses.filter(c => !idsToDelete.includes(c.courseId));
-      const updatedStudents = currentStudents.map(student => {
-        if (student?.enrolledCourses?.some(id => idsToDelete.includes(id))) {
-          return { ...student, enrolledCourses: student.enrolledCourses.filter(id => !idsToDelete.includes(id)) };
-        }
-        return student;
-      });
-      localStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify(updatedCourses));
-      localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updatedStudents));
-      setCourses(updatedCourses);
-      setStudents(updatedStudents);
+      await deleteCourses(idsToDelete);
+      setCourses(prev => prev.filter(c => !idsToDelete.includes(c.courseId)));
       setSelected([]);
       setSnackbar({ open: true, message: `${idsToDelete.length} course(s) deleted successfully.`, severity: 'success' });
     } catch (error) {

@@ -169,7 +169,7 @@ function App() {
         <Route path="/gradesform" element={<GradesForm />} />
         <Route path="/assignmentsmanagement" element={<AssignmentsManagement />} />
         <Route path="/assignmentsform" element={<AssignmentsForm />} />
-        <Route path="/assignmentsform/:assignmentCode" element={<AssignmentsForm />} />
+        <Route path="/assignmentsform/:assignmentId" element={<AssignmentsForm />} />
       </Routes>
     </div>
   );
