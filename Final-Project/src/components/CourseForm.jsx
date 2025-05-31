@@ -5,13 +5,13 @@ import { useNavigate, Link as RouterLink, useParams, useLocation } from 'react-r
 import {
   Container, Box, Typography, TextField, Button, Grid, Select, MenuItem,
   FormControl, InputLabel, Snackbar, Alert, Breadcrumbs, Link, Tooltip,
-  IconButton, InputAdornment, CircularProgress, FormHelperText
+  IconButton, InputAdornment, CircularProgress
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import InfoIcon from '@mui/icons-material/Info';
 import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
-import { addCourse, updateCourse, listCourses, getCourseById } from '../firebase/courses';
+import { addCourse, updateCourse, getCourseById } from '../firebase/courses';
 
 const colors = {
   green: '#bed630',
@@ -21,12 +21,7 @@ const colors = {
 };
 
 const DAYS_OF_WEEK = [
-  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
-];
-
-const TIME_SLOTS = [
-  '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
-  '16:00', '17:00', '18:00', '19:00', '20:00'
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
 ];
 
 export default function CourseForm() {
@@ -49,6 +44,7 @@ export default function CourseForm() {
     startTime: '',
     endTime: '',
     startingDate: '',
+    endDate: '',
     description: '',
     semester: ''
   });
@@ -60,7 +56,13 @@ export default function CourseForm() {
         try {
           const courseData = await getCourseById(editCourseId);
           if (courseData) {
-            setFormData(courseData);
+            setFormData({
+              ...courseData,
+              startTime: courseData.startTime || '',
+              endTime: courseData.endTime || '',
+              startingDate: courseData.startingDate || '',
+              endDate: courseData.endDate || '',
+            });
           } else {
             setError('Course not found');
           }
@@ -74,7 +76,10 @@ export default function CourseForm() {
         setFormData({
           ...courseToDuplicateData,
           courseId: '',
-          startingDate: ''
+          startTime: '',
+          endTime: '',
+          startingDate: '',
+          endDate: '',
         });
       }
     };
@@ -104,18 +109,43 @@ export default function CourseForm() {
     if (!formData.courseName.trim()) return 'Course Name is required';
     if (!formData.professorsName.trim()) return 'Professor Name is required';
     if (!formData.creditPoints) return 'Credit Points is required';
+    
+    const creditPointsValue = parseFloat(formData.creditPoints); // Use parseFloat to handle decimals
+    if (isNaN(creditPointsValue)) return 'Credit Points must be a valid number.';
+    // Check if the number multiplied by 2 is an integer. This allows for .0 and .5
+    if (!Number.isInteger(creditPointsValue * 2)) {
+      return 'Credit Points must be a whole or half number (e.g., 1, 1.5, 2).';
+    }
+    if (creditPointsValue < 1 || creditPointsValue > 9) {
+      return 'Credit Points must be between 1 and 9 (e.g., 1, 1.5, ..., 9).';
+    }
+
     if (!formData.dayOfWeek) return 'Day of Week is required';
     if (!formData.startTime) return 'Start Time is required';
     if (!formData.endTime) return 'End Time is required';
     if (!formData.startingDate) return 'Starting Date is required';
-    if (formData.startTime >= formData.endTime) return 'End Time must be after Start Time';
+    if (!formData.endDate) return 'End Date is required';
+    
+    const startingDate = new Date(formData.startingDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); 
+    if (startingDate.getTime() < today.getTime()) return 'Starting Date cannot be in the past.';
 
-    // Validate course ID format
+    if (formData.startTime >= formData.endTime) return 'End Time must be after Start Time';
+    if (new Date(formData.startingDate) >= new Date(formData.endDate)) return 'End Date must be after Starting Date';
+
     if (!isEditMode) {
-      const courseNameFirstLetter = formData.courseName.trim().charAt(0).toUpperCase();
-      const courseIdRegex = new RegExp(`^${courseNameFirstLetter}\\d{4}$`);
-      if (!courseIdRegex.test(formData.courseId)) {
-        return `Course ID must start with '${courseNameFirstLetter}' (from the course name), followed by exactly 4 digits — e.g., ${courseNameFirstLetter}1234`;
+      const courseNameTrimmed = formData.courseName.trim();
+      const courseIdTrimmed = formData.courseId.trim(); // Trim courseId as well
+
+      if (courseNameTrimmed) { // Only validate if courseName is not empty
+        const courseNameFirstLetter = courseNameTrimmed.charAt(0).toUpperCase();
+        const courseIdRegex = new RegExp(`^${courseNameFirstLetter}\\d{4}$`);
+        
+        // console.log("Validating Course ID:", courseIdTrimmed, "against pattern for letter:", courseNameFirstLetter); // For debugging
+        if (!courseIdRegex.test(courseIdTrimmed)) {
+          return `Course ID must start with '${courseNameFirstLetter}' (from the course name), followed by exactly 4 digits — e.g., ${courseNameFirstLetter}1234`;
+        }
       }
     }
 
@@ -195,7 +225,8 @@ export default function CourseForm() {
           {pageTitle}
         </Typography>
 
-        <Grid container spacing={1.5}>
+        <Grid container spacing={2}>
+          {/* Row 1: Course Name */}
           <Grid item xs={12}>
             <TextField
               fullWidth
@@ -207,6 +238,7 @@ export default function CourseForm() {
             />
           </Grid>
 
+          {/* Row 2: Course ID & Professor's Name */}
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
@@ -236,20 +268,6 @@ export default function CourseForm() {
               }}
             />
           </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Credit Points"
-              name="creditPoints"
-              type="number"
-              value={formData.creditPoints}
-              onChange={handleInputChange}
-              inputProps={{ min: 1, step: "any" }}
-              required
-            />
-          </Grid>
-
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
@@ -261,6 +279,7 @@ export default function CourseForm() {
             />
           </Grid>
 
+          {/* Row 3: Starting Date & End Date */}
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
@@ -273,23 +292,48 @@ export default function CourseForm() {
               required
             />
           </Grid>
-
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth required>
-              <InputLabel>Semester</InputLabel>
-              <Select
-                name="semester"
-                value={formData.semester}
-                onChange={handleInputChange}
-                label="Semester"
-              >
-                <MenuItem value="A">Semester A</MenuItem>
-                <MenuItem value="B">Semester B</MenuItem>
-                <MenuItem value="Summer">Summer Semester</MenuItem>
-              </Select>
-            </FormControl>
+            <TextField
+              fullWidth
+              label="End Date"
+              name="endDate"
+              type="date"
+              value={formData.endDate}
+              onChange={handleInputChange}
+              InputLabelProps={{ shrink: true }}
+              required
+            />
           </Grid>
 
+          {/* Row 4: Start Time & End Time */}
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Start Time"
+              name="startTime"
+              type="time"
+              value={formData.startTime}
+              onChange={handleInputChange}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ step: 900 }} // 15 minute increments
+              required
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="End Time"
+              name="endTime"
+              type="time"
+              value={formData.endTime}
+              onChange={handleInputChange}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ step: 900 }} // 15 minute increments
+              required
+            />
+          </Grid>
+          
+          {/* Row 5: Day of Week, Semester, Credit Points */}
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth required>
               <InputLabel>Day of Week</InputLabel>
@@ -305,39 +349,35 @@ export default function CourseForm() {
               </Select>
             </FormControl>
           </Grid>
-
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth required>
-              <InputLabel>Start Time</InputLabel>
+              <InputLabel>Semester</InputLabel>
               <Select
-                name="startTime"
-                value={formData.startTime}
+                name="semester"
+                value={formData.semester}
                 onChange={handleInputChange}
-                label="Start Time"
+                label="Semester"
               >
-                {TIME_SLOTS.map(time => (
-                  <MenuItem key={time} value={time}>{time}</MenuItem>
-                ))}
+                <MenuItem value="A">A</MenuItem>
+                <MenuItem value="B">B</MenuItem>
+                <MenuItem value="Summer">Summer</MenuItem>
               </Select>
             </FormControl>
           </Grid>
-
           <Grid item xs={12} sm={4}>
-            <FormControl fullWidth required>
-              <InputLabel>End Time</InputLabel>
-              <Select
-                name="endTime"
-                value={formData.endTime}
-                onChange={handleInputChange}
-                label="End Time"
-              >
-                {TIME_SLOTS.map(time => (
-                  <MenuItem key={time} value={time}>{time}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <TextField
+              fullWidth
+              label="Credit Points"
+              name="creditPoints"
+              type="number"
+              value={formData.creditPoints}
+              onChange={handleInputChange}
+              inputProps={{ min: 1, step: "0.5" }} // Allow steps of 0.5
+              required
+            />
           </Grid>
 
+          {/* Row 6: Description */}
           <Grid item xs={12}>
             <TextField
               fullWidth

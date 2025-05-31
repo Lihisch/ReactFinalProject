@@ -17,11 +17,12 @@ export const addCourse = async (courseData) => {
 
     const docRef = await addDoc(collection(firestore, 'courses'), {
       ...courseData,
+      // endDate will be included if present in courseData
       startingDate: courseData.startingDate || new Date().toISOString().split('T')[0],
       courseHours: `${courseData.startTime || ''} - ${courseData.endTime || ''}`,
       semester: courseData.semester || 'A' // Default to Semester A if not specified
     });
-    return courseData;
+    return { id: docRef.id, ...courseData };
   } catch (error) {
     console.error("Error adding course:", error);
     throw error;
@@ -32,7 +33,10 @@ export const addCourse = async (courseData) => {
 export const listCourses = async () => {
   try {
     const querySnapshot = await getDocs(collection(firestore, 'courses'));
-    return querySnapshot.docs.map(doc => doc.data());
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id, // Add the document ID
+      ...doc.data()
+    }));
   } catch (error) {
     console.error("Error getting courses:", error);
     throw error;
@@ -48,12 +52,15 @@ export const getCourseById = async (courseId) => {
 
     const courseQuery = query(collection(firestore, 'courses'), where('courseId', '==', courseId));
     const querySnapshot = await getDocs(courseQuery);
-    
+
     if (querySnapshot.empty) {
       return null;
     }
 
-    return querySnapshot.docs[0].data();
+    return {
+      id: querySnapshot.docs[0].id, // Add the document ID
+      ...querySnapshot.docs[0].data()
+    };
   } catch (error) {
     console.error("Error getting course:", error);
     throw error;
@@ -74,15 +81,16 @@ export const updateCourse = async (courseId, courseData) => {
 
     const courseQuery = query(collection(firestore, 'courses'), where('courseId', '==', courseId));
     const querySnapshot = await getDocs(courseQuery);
-    
+
     if (querySnapshot.empty) {
       throw new Error('Course not found');
     }
 
+    // Destructure to remove Firestore ID from data to be saved, if present
+    const { id: firestoreDocId, ...dataToSave } = courseData;
     const docRef = doc(firestore, 'courses', querySnapshot.docs[0].id);
-    await updateDoc(docRef, courseData);
-
-    return courseData;
+    await updateDoc(docRef, dataToSave);
+    return { id: querySnapshot.docs[0].id, ...dataToSave };
   } catch (error) {
     console.error("Error updating course:", error);
     throw error;
@@ -104,7 +112,7 @@ export const deleteCourses = async (courseIds) => {
 
       const courseQuery = query(collection(firestore, 'courses'), where('courseId', '==', courseId));
       const querySnapshot = await getDocs(courseQuery);
-      
+
       if (!querySnapshot.empty) {
         const docRef = doc(firestore, 'courses', querySnapshot.docs[0].id);
         await deleteDoc(docRef);

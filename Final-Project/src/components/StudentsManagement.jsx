@@ -1,4 +1,3 @@
-// c:\Users\ASUS\OneDrive\SCHOOL\שנה ב\סמסטר ב\REACT FINAL PROJECT\ReactFinalProject\Final-Project\src\components\StudentsManagement.jsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
@@ -63,7 +62,7 @@ export default function StudentsManagement() {
   const [viewCoursesDialogOpen, setViewCoursesDialogOpen] = useState(false);
   const [studentToView, setStudentToView] = useState(null);
   const [stats, setStats] = useState({ total: 0, enrolled: 0, notEnrolled: 0 });
-  const [editingStudentId, setEditingStudentId] = useState(null);
+  const [editingStudent, setEditingStudent] = useState(null); // Changed to store the whole student object
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
   const [selected, setSelected] = useState([]);
@@ -103,30 +102,37 @@ export default function StudentsManagement() {
     } catch (err) {
       console.error("Error loading courses from Firebase:", err);
       setError("Failed to load course data from Firebase.");
-      setCourses([]); 
+      setCourses([]);
     }
   }, []);
 
   useEffect(() => {
-    fetchData(); 
+    fetchData();
   }, [fetchData]);
 
   useEffect(() => {
-    setIsLoading(true); 
-    setError(null);     
+    setIsLoading(true);
+    setError(null);
     listStudents()
-      .then((Students) => {
-        setStudents(Students);
+      .then((studentsFromFirebase) => {
+        // Ensure every student has an enrolledCourses array and a valid studentId
+        // Also ensure 'id' (Firestore doc ID) is present
+        const processedStudents = studentsFromFirebase.map(student => ({
+          ...student,
+          id: student.id, // Ensure Firestore document ID is explicitly carried over
+          enrolledCourses: Array.isArray(student.enrolledCourses) ? student.enrolledCourses : []
+        }));
+        setStudents(processedStudents);
       })
       .catch((err) => {
         console.error("Error fetching students from Firebase:", err);
         setError("Failed to load students from Firebase.");
-        setStudents([]); 
+        setStudents([]);
       })
       .finally(() => {
-        setIsLoading(false); 
+        setIsLoading(false);
       });
-  }, []); 
+  }, []);
 
   useEffect(() => {
     if (Array.isArray(students)) {
@@ -184,20 +190,20 @@ export default function StudentsManagement() {
   const handleCourseFilterChange = (event) => {
     setSelectedCourseFilter(event.target.value);
     setPage(0);
-    setEditingStudentId(null);
+    setEditingStudent(null);
   };
 
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
     setPage(0);
-    setEditingStudentId(null);
+    setEditingStudent(null);
   };
 
   const handleClearFilters = () => {
     setSelectedCourseFilter('');
     setSearchTerm('');
     setPage(0);
-    setEditingStudentId(null);
+    setEditingStudent(null);
   };
 
   const handleRequestSort = (property) => {
@@ -205,65 +211,72 @@ export default function StudentsManagement() {
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
     setPage(0);
-    setEditingStudentId(null);
+    setEditingStudent(null);
   };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
-    setEditingStudentId(null);
+    setEditingStudent(null);
   };
 
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
-    setEditingStudentId(null);
+    setEditingStudent(null);
   };
 
 
   const handleAddStudent = () => {
     navigate('/studentform');
   };
-
-
+  
   const handleStartEdit = (student) => {
-    setEditingStudentId(student.studentId);
+    if (!student || !student.id) { // Check for Firestore document ID
+      setSnackbar({ open: true, message: 'Cannot edit: Student data is missing its unique identifier.', severity: 'error' });
+      return;
+    }
+    setEditingStudent(student); // Store the whole student object
     setEditFirstName(student.firstName || '');
     setEditLastName(student.lastName || '');
     setSelected([]);
   };
 
   const handleCancelEdit = () => {
-    setEditingStudentId(null);
+    setEditingStudent(null);
     setEditFirstName('');
     setEditLastName('');
   };
 
   const handleSaveEdit = async () => {
-    if (!isValidId(editingStudentId)) return;
+    if (!editingStudent || !editingStudent.id) { // Corrected: Check if editingStudent and its Firestore ID are set
+        setSnackbar({ open: true, message: 'Error: No student selected for editing or missing ID.', severity: 'error' });
+        return;
+    }
     if (!editFirstName.trim() || !editLastName.trim()) {
         setSnackbar({ open: true, message: 'First and Last names cannot be empty.', severity: 'error' });
         return;
     }
     try {
-        const editingIdStr = String(editingStudentId);
         const updatedData = {
             firstName: editFirstName.trim(),
             lastName: editLastName.trim()
+            // studentId (the user-defined one) is not changed here
+            // enrolledCourses are preserved from the original editingStudent object
         };
         
-        // Find the student document ID from the students array
-        const studentToUpdate = students.find(s => String(s.studentId) === editingIdStr);
-        if (!studentToUpdate || !studentToUpdate.id) {
-            throw new Error('Student document ID not found');
-        }
-        
-        // Update in Firebase using the document ID
-        await updateStudent(studentToUpdate.id, updatedData);
+        // Prepare the object to send to Firebase, ensuring it includes the Firestore ID
+        const studentToUpdateInFirebase = {
+            ...editingStudent, // Spread existing student data (like studentId, enrolledCourses)
+            ...updatedData,    // Override with new first and last names
+            id: editingStudent.id // Crucially, include the Firestore document ID
+        };
+
+        await updateStudent(studentToUpdateInFirebase); // updateStudent expects an object with 'id'
         
         // Update local state
         const updatedStudents = students.map(s =>
-            String(s.studentId) === editingIdStr
-            ? { ...s, ...updatedData }
+            s.id === editingStudent.id // Match by Firestore document ID
+            ? { ...s, ...updatedData } // Update with new first/last names, keep other fields like enrolledCourses
             : s
         );
         setStudents(updatedStudents);
@@ -371,7 +384,7 @@ export default function StudentsManagement() {
       newSelected = selected.filter(id => String(id) !== studentIdStr);
     }
     setSelected(newSelected);
-    setEditingStudentId(null);
+    setEditingStudent(null);
   };
 
   const isSelected = (studentId) => {
@@ -507,7 +520,13 @@ export default function StudentsManagement() {
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={4} md={4}>
-             <TextField fullWidth size="small" variant="outlined" placeholder="Search by name or ID..." value={searchTerm} onChange={handleSearchChange} slotProps={{ startAdornment: ( <InputAdornment position="start"> <SearchIcon fontSize="small" /> </InputAdornment> ), }} />
+             <TextField
+                fullWidth
+                size="small"
+                variant="outlined"
+                placeholder="Search by name or ID..."
+                value={searchTerm} onChange={handleSearchChange}
+                InputProps={{ startAdornment: ( <InputAdornment position="start"> <SearchIcon fontSize="small" /> </InputAdornment> ) }} />
           </Grid>
           <Grid item xs={12} sm={3} md={4}>
              <Button fullWidth variant="outlined" size="medium" onClick={handleClearFilters} disabled={!selectedCourseFilter && !searchTerm} startIcon={<ClearIcon />}>
@@ -523,7 +542,7 @@ export default function StudentsManagement() {
               sx={{
                 pl: { sm: 2 },
                 pr: { xs: 1, sm: 1 },
-                bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
+                bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity)
               }}
             >
               <Typography sx={{ flex: '1 1 100%' }} color="inherit" variant="subtitle1" component="div">
@@ -577,7 +596,7 @@ export default function StudentsManagement() {
               ) : (
                 paginatedRows.map((student) => {
                     const studentIdStr = String(student.studentId);
-                    const isEditing = String(editingStudentId) === studentIdStr;
+                    const isEditing = editingStudent && editingStudent.id === student.id; // Compare by Firestore ID
                     const studentSelected = isSelected(student.studentId);
                     const studentNames = getStudentName(student);
 
@@ -711,8 +730,8 @@ export default function StudentsManagement() {
             <List dense>
               {getEnrolledCourseNames.map((course) => (
                 <ListItem key={course.id}>
-                  <ListItemText 
-                    primary={course.name} 
+                  <ListItemText
+                    primary={course.name}
                     secondary={
                       <>
                         <Typography component="span" variant="body2" color="text.primary">

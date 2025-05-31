@@ -41,15 +41,15 @@ export default function StudentForm() {
   const validate = () => {
     const temp = {};
     const alphaRegex = /^[A-Za-z]+$/;
-    const numericRegex = /^[0-9]+מ$/;
+    const numericRegex = /^[0-9]+$/; // Changed: Only digits allowed
 
     // Student ID Validation
     if (!formData.studentId) {
       temp.studentId = 'Student ID is required.';
-    } else if (!numericRegex.test(formData.studentId)) {
-      temp.studentId = 'Student ID must contain only numbers.';
     } else if (formData.studentId.length !== 9) {
       temp.studentId = 'Student ID must be exactly 9 digits.';
+    } else if (!numericRegex.test(formData.studentId)) { // Check for numeric after length check
+      temp.studentId = 'Student ID must contain only numbers.';
     } else {
       try {
         const existingStudents = JSON.parse(localStorage.getItem('students')) || [];

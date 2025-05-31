@@ -66,16 +66,15 @@ export const updateAssignment = async (assignmentId, assignmentData) => {
     }
 
     // Remove status field if it exists
-    const { status, ...dataToSave } = assignmentData;
+    const { id: firestoreDocId, status, ...dataToSave } = assignmentData;
 
     // Find the document with the matching assignmentId
     const assignmentsQuery = query(collection(firestore, COLLECTION_NAME), where("assignmentId", "==", assignmentId));
     const querySnapshot = await getDocs(assignmentsQuery);
-    
+
     if (querySnapshot.empty) {
       throw new Error('Assignment not found');
     }
-
     // Get the document reference using the first matching document's ID
     const assignmentRef = doc(firestore, COLLECTION_NAME, querySnapshot.docs[0].id);
     await updateDoc(assignmentRef, dataToSave);

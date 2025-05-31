@@ -1,16 +1,17 @@
 // src/components/EnrollmentForm.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Container, Box, Typography, Button, Grid, Snackbar, Alert, Breadcrumbs, Link as MuiLink,
   FormHelperText, FormGroup, FormControlLabel, Checkbox, FormLabel, FormControl,
-  List, ListItem, CircularProgress, Paper, alpha, Select, MenuItem, InputLabel
+  List, ListItem, CircularProgress, Paper, alpha, Select, MenuItem, InputLabel, Chip
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import SchoolIcon from '@mui/icons-material/School';
 import SaveIcon from '@mui/icons-material/Save';
 import { listStudents, updateStudent } from '../firebase/students';
 import { listCourses } from '../firebase/courses';
+
 
 const colors = {
   primaryGreenBase: '#bed630',
@@ -28,6 +29,13 @@ const colors = {
 // Helper to check for valid ID
 const isValidId = (id) => id != null && id !== '';
 
+const SEMESTER_OPTIONS = [
+  { value: '', label: 'All Semesters' },
+  { value: 'A', label: ' A' },
+  { value: 'B', label: ' B' },
+  { value: 'Summer', label: 'Summer ' },
+];
+
 export default function EnrollmentForm() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -37,10 +45,12 @@ export default function EnrollmentForm() {
   const [allCourses, setAllCourses] = useState([]);
   const [selectedStudentId, setSelectedStudentId] = useState(studentIdFromUrl || '');
   const [student, setStudent] = useState(null);
+  const [initialEnrollmentIds, setInitialEnrollmentIds] = useState(new Set());
   const [selectedCourseIds, setSelectedCourseIds] = useState(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formError, setFormError] = useState(null);
+  const [selectedSemesterFilter, setSelectedSemesterFilter] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   // Load initial data
@@ -49,12 +59,18 @@ export default function EnrollmentForm() {
       setIsLoading(true);
       setError(null);
       try {
-        const [studentsData, coursesData] = await Promise.all([
+        const [studentsDataFromFirebase, coursesDataFromFirebase] = await Promise.all([
           listStudents(),
           listCourses()
         ]);
-        setAllStudents(studentsData);
-        setAllCourses(coursesData);
+
+        const processedStudents = studentsDataFromFirebase.map(s => ({
+          ...s,
+          id: s.id,
+          enrolledCourses: Array.isArray(s.enrolledCourses) ? s.enrolledCourses : []
+        }));
+        setAllStudents(processedStudents);
+        setAllCourses(coursesDataFromFirebase);
       } catch (err) {
         console.error("Error loading data:", err);
         setError("Failed to load data from Firebase.");
@@ -71,18 +87,22 @@ export default function EnrollmentForm() {
     if (isValidId(selectedStudentId)) {
       setIsLoading(true);
       const foundStudent = allStudents.find(s => String(s.studentId) === String(selectedStudentId));
-      
+
       if (foundStudent) {
         setStudent(foundStudent);
-        setSelectedCourseIds(new Set((foundStudent.enrolledCourses || []).map(String)));
+        const initiallyEnrolled = new Set((foundStudent.enrolledCourses || []).map(String));
+        setInitialEnrollmentIds(initiallyEnrolled);
+        setSelectedCourseIds(new Set(initiallyEnrolled));
       } else {
         console.error(`EnrollmentForm Error: Student with selected ID ${selectedStudentId} not found in loaded students.`);
         setError(`Student with ID ${selectedStudentId} not found.`);
         setSelectedStudentId('');
+        setInitialEnrollmentIds(new Set());
       }
       setIsLoading(false);
     } else {
       setStudent(null);
+      setInitialEnrollmentIds(new Set());
       setSelectedCourseIds(new Set());
     }
   }, [selectedStudentId, allStudents]);
@@ -111,15 +131,22 @@ export default function EnrollmentForm() {
 
     try {
       const updatedEnrolledCourses = Array.from(selectedCourseIds);
-      await updateStudent(student.id, { enrolledCourses: updatedEnrolledCourses });
-      
+      if (!student || !student.id) {
+        throw new Error("Student data or Firestore ID is missing.");
+      }
+      await updateStudent({ ...student, enrolledCourses: updatedEnrolledCourses });
+
       setSnackbar({ open: true, message: 'Enrollment updated successfully!', severity: 'success' });
       setTimeout(() => {
         navigate('/studentsmanagement');
       }, 1500);
     } catch (err) {
       console.error("Error updating enrollment:", err);
-      setSnackbar({ open: true, message: 'Error updating enrollment.', severity: 'error' });
+      let errorMessage = 'Error updating enrollment.';
+      if (err.message) {
+        errorMessage += ` Details: ${err.message}`;
+      }
+      setSnackbar({ open: true, message: errorMessage, severity: 'error' });
     }
   };
 
@@ -128,19 +155,62 @@ export default function EnrollmentForm() {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
+  const filteredAndSortedCourses = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return allCourses
+      .filter(course => {
+        if (course.endDate) {
+          try {
+            const courseEndDate = new Date(course.endDate);
+            if (courseEndDate < today) {
+              return false;
+            }
+          } catch (e) {
+            console.warn(`Invalid date format for course.endDate: ${course.endDate} for courseId: ${course.courseId}`, e);
+            return true;
+          }
+        }
+        return true;
+      })
+      .filter(course => {
+        if (!selectedSemesterFilter) return true;
+        return course.semester === selectedSemesterFilter;
+      })
+      .sort((a, b) => {
+        const parseDate = (dateStr) => {
+          if (!dateStr) return null;
+          if (dateStr.seconds !== undefined && dateStr.nanoseconds !== undefined) {
+            return new Date(dateStr.seconds * 1000 + dateStr.nanoseconds / 1000000);
+          }
+          const d = new Date(dateStr);
+          return isNaN(d.getTime()) ? null : d;
+        };
+
+        const dateA = parseDate(a.startingDate); // Corrected field name
+        const dateB = parseDate(b.startingDate); // Corrected field name
+
+        if (dateA === null && dateB === null) return 0;
+        if (dateA === null) return 1;
+        if (dateB === null) return -1;
+
+        return dateA.getTime() - dateB.getTime();
+      });
+  }, [allCourses, selectedSemesterFilter]);
+
+
   // --- Render Logic ---
 
-  // Display general error first if it exists
   if (error) {
     return (
-        <Container sx={{ py: 3 }}>
-            <Alert severity="error">{error}</Alert>
-            <Button onClick={() => navigate('/studentsmanagement')} sx={{ mt: 2 }}>Back to List</Button>
-        </Container>
+      <Container sx={{ py: 3 }}>
+        <Alert severity="error">{error}</Alert>
+        <Button onClick={() => navigate('/studentsmanagement')} sx={{ mt: 2 }}>Back to List</Button>
+      </Container>
     );
   }
 
-  // Display loading indicator if any loading is happening
   if (isLoading) {
     return <Container sx={{ py: 3, textAlign: 'center' }}><CircularProgress sx={{ color: colors.primaryGreen }} /></Container>;
   }
@@ -151,16 +221,14 @@ export default function EnrollmentForm() {
         <MuiLink component={RouterLink} to="/" underline="hover" sx={{ display: 'flex', alignItems: 'center', color: colors.secondaryGrey }}>
           <HomeIcon sx={{ mr: 0.5, color: colors.iconContrastDark }} fontSize="inherit" /> Home
         </MuiLink>
-        {/* Conditionally link back to students management */}
         {studentIdFromUrl && (
-            <MuiLink component={RouterLink} to="/studentsmanagement" underline="hover" sx={{ color: colors.secondaryGrey }}>Students Management</MuiLink>
+          <MuiLink component={RouterLink} to="/studentsmanagement" underline="hover" sx={{ color: colors.secondaryGrey }}>Students Management</MuiLink>
         )}
         <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', color: colors.textDark }}>
-         Manage Enrollments
+          Manage Enrollments
         </Typography>
       </Breadcrumbs>
 
-      {/* Title: Show student name if selected, otherwise generic title */}
       <Typography variant="h4" gutterBottom sx={{ color: colors.textDark, fontWeight: 600 }}>
         Manage Enrollments
         {student && `: ${student.firstName} ${student.lastName}`}
@@ -169,7 +237,6 @@ export default function EnrollmentForm() {
         <Typography variant="body1" sx={{ color: colors.secondaryGrey, mb: 2 }}>(ID: {student.studentId})</Typography>
       )}
 
-      {/* Student Selector: Show ONLY if no studentId came from URL */}
       {!studentIdFromUrl && (
         <FormControl fullWidth sx={{ mb: 3 }}>
           <InputLabel id="student-select-label">Select Student</InputLabel>
@@ -182,34 +249,48 @@ export default function EnrollmentForm() {
           >
             <MenuItem value=""><em>-- Select a Student --</em></MenuItem>
             {allStudents
-                .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
-                .map((s) => (
-                    <MenuItem key={s.studentId} value={s.studentId}>
-                        {s.lastName}, {s.firstName} ({s.studentId})
-                    </MenuItem>
-            ))}
+              .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
+              .map((s) => (
+                <MenuItem key={s.studentId} value={s.studentId}>
+                  {s.lastName}, {s.firstName} ({s.studentId})
+                </MenuItem>
+              ))}
           </Select>
         </FormControl>
       )}
 
-      {/* Course Selection Form: Show ONLY if a student is selected (either from URL or dropdown) */}
       {isValidId(selectedStudentId) && student ? (
         <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, backgroundColor: colors.white }}>
           <Box component="form" onSubmit={handleSubmit}>
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+              <InputLabel id="semester-filter-label">Filter by Semester</InputLabel>
+              <Select
+                labelId="semester-filter-label"
+                value={selectedSemesterFilter}
+                label="Filter by Semester"
+                onChange={(e) => setSelectedSemesterFilter(e.target.value)}
+              >
+                {SEMESTER_OPTIONS.map(opt => (
+                  <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
             <FormControl error={!!formError} component="fieldset" sx={{ width: '100%' }} variant="standard">
               <FormLabel component="legend" sx={{ mb: 1, fontWeight: '500', color: colors.textDark }}>Available Courses</FormLabel>
               <Box sx={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid', borderColor: formError ? colors.errorRed : alpha(colors.secondaryGrey, 0.3), borderRadius: '4px', p: 1, mb: 1 }}>
                 <FormGroup>
-                  {allCourses.length > 0 ? (
+                  {filteredAndSortedCourses.length > 0 ? (
                     <List dense disablePadding>
-                      {allCourses
-                        .sort((a, b) => (a?.courseName || '').localeCompare(b?.courseName || ''))
+                      {filteredAndSortedCourses
                         .map((course) => {
                           if (!course || typeof course !== 'object' || !course.courseId) {
                             console.warn("Skipping invalid course object:", course);
                             return null;
                           }
                           const courseIdStr = String(course.courseId);
+                          const isInitiallyEnrolled = initialEnrollmentIds.has(courseIdStr);
+                          const checkboxDisabled = false;
                           return (
                             <ListItem key={courseIdStr} disablePadding sx={{ py: 0.5 }}>
                               <FormControlLabel
@@ -219,9 +300,15 @@ export default function EnrollmentForm() {
                                     onChange={handleCourseCheckboxChange}
                                     value={courseIdStr}
                                     sx={{ color: colors.secondaryGrey, '&.Mui-checked': { color: colors.primaryGreen } }}
+                                    disabled={checkboxDisabled}
                                   />
                                 }
-                                label={`${course.courseName || 'N/A'} (${courseIdStr}) - ${course.dayOfWeek || ''} ${course.startTime || ''}-${course.endTime || ''}`}
+                                label={
+                                  <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                                    {`${course.courseName || 'N/A'} (${courseIdStr}) -   ${course.dayOfWeek || ''} ${course.startTime || ''}-${course.endTime || ''} - ${course.semester || 'N/A'} `}
+                                    {isInitiallyEnrolled && <Chip label="Enrolled" size="small" sx={{ ml: 1, backgroundColor: alpha(colors.primaryGreen, 0.7), color: colors.white, height: '20px', '.MuiChip-label': { fontSize: '0.7rem', lineHeight: '1.5', px: '6px' } }} />}
+                                  </Box>
+                                }
                                 sx={{ width: '100%', color: colors.textDark, '.MuiFormControlLabel-label': { fontSize: '0.95rem' } }}
                               />
                             </ListItem>
@@ -230,7 +317,11 @@ export default function EnrollmentForm() {
                       }
                     </List>
                   ) : (
-                    <Typography variant="body2" sx={{ p: 2, color: colors.secondaryGrey }}>No courses available to display.</Typography>
+                    <Typography variant="body2" sx={{ p: 2, color: colors.secondaryGrey, textAlign: 'center' }}>
+                      {selectedSemesterFilter
+                        ? `No courses found for the selected semester.`
+                        : `No courses available to display.`}
+                    </Typography>
                   )}
                 </FormGroup>
               </Box>
@@ -240,8 +331,7 @@ export default function EnrollmentForm() {
             <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
               <Button
                 variant="outlined"
-                // Navigate back to list only if accessed specifically, otherwise just stay
-                onClick={() => { if (studentIdFromUrl) navigate('/studentsmanagement'); else setSelectedStudentId(''); /* Clear selection in general mode */}}
+                onClick={() => { if (studentIdFromUrl) navigate('/studentsmanagement'); else setSelectedStudentId(''); }}
                 sx={{ color: colors.secondaryGrey, borderColor: alpha(colors.secondaryGrey, 0.5) }}
               >
                 {studentIdFromUrl ? 'Back to List' : 'Cancel Selection'}
@@ -258,9 +348,8 @@ export default function EnrollmentForm() {
           </Box>
         </Paper>
       ) : (
-        // Show message if in general mode and no student is selected yet
         !studentIdFromUrl && !selectedStudentId && (
-            <Alert severity="info">Please select a student from the dropdown above to manage their enrollments.</Alert>
+          <Alert severity="info">Please select a student from the dropdown above to manage their enrollments.</Alert>
         )
       )}
 
