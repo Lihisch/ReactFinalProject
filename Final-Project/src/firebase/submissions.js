@@ -52,11 +52,11 @@ export const getSubmissionsByStudent = async (studentId) => {
 };
 
 // Get submissions by assignment
-export const getSubmissionsByAssignment = async (assignmentCode) => {
+export const getSubmissionsByAssignment = async (assignmentId) => {
   try {
     const q = query(
       collection(firestore, SUBMISSIONS_COLLECTION),
-      where('assignmentCode', '==', assignmentCode),
+      where('assignmentId', '==', assignmentId),
       orderBy('submissionDate', 'desc')
     );
     const querySnapshot = await getDocs(q);
@@ -215,12 +215,12 @@ export const getSubmissionsByCourseAndStudent = async (courseId, studentId) => {
 };
 
 // Get submissions by course and assignment
-export const getSubmissionsByCourseAndAssignment = async (courseId, assignmentCode) => {
+export const getSubmissionsByCourseAndAssignment = async (courseId, assignmentId) => {
   try {
     const q = query(
       collection(firestore, SUBMISSIONS_COLLECTION),
       where('courseId', '==', courseId),
-      where('assignmentCode', '==', assignmentCode),
+      where('assignmentId', '==', assignmentId),
       orderBy('submissionDate', 'desc')
     );
     const querySnapshot = await getDocs(q);

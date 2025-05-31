@@ -8,7 +8,8 @@ import {
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import SaveIcon from '@mui/icons-material/Save';
-import { saveSubmission, getSubmissionsByCourseAndAssignment } from '../firebase/grades';
+// import { saveSubmission, getSubmissionsByCourseAndAssignment } from '../firebase/grades';
+import { getSubmissionsByCourseAndAssignment, saveSubmission } from '../firebase/grades'; // Only use submissions logic
 import { listCourses } from '../firebase/courses';
 import { listAssignments } from '../firebase/assignments';
 import { listStudents } from '../firebase/students';
@@ -201,17 +202,17 @@ export default function GradesForm() {
           assignmentId: selectedAssignmentId,
           studentId: studentIdStr,
           grade: gradeToSave,
-          comments: '', // Assuming comments are handled elsewhere or default to empty
-          submitted: submittedStatus, // True if grade exists, false otherwise
+          comments: '',
+          submitted: submittedStatus,
           status: statusToSave,
-          submissionDate: new Date().toISOString().split('T')[0] // Current date for submission/update
+          submissionDate: new Date().toISOString().split('T')[0]
         };
         await saveSubmission(submissionData);
       });
 
       await Promise.all(savePromises);
       setSnackbar({ open: true, message: 'Grades saved successfully!', severity: 'success' });
-
+      setTimeout(() => { navigate('/AssignmentsManagement'); }, 1200);
     } catch (error) {
       console.error("Error saving grades:", error);
       setSnackbar({ open: true, message: 'An error occurred while saving grades.', severity: 'error' });

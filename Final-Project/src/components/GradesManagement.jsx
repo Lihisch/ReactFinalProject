@@ -20,16 +20,7 @@ import DangerousIcon from '@mui/icons-material/Dangerous';
 import EditIcon from '@mui/icons-material/Edit';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import PercentIcon from '@mui/icons-material/Percent';
-import { 
-  getAllSubmissions, 
-  getSubmissionsByCourse, 
-  getSubmissionsByCourseAndAssignment,
-  saveSubmission,
-  updateSubmissionGrade,
-  updateSubmissionComment,
-  updateSubmissionStatus,
-  deleteSubmission
-} from '../firebase/grades';
+import { getAllSubmissions } from '../firebase/grades';
 import { listCourses } from '../firebase/courses';
 import { listAssignments } from '../firebase/assignments';
 import { listStudents } from '../firebase/students';

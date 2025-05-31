@@ -1,5 +1,3 @@
-// FILE: src/components/Header.jsx
-
 import * as React from 'react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -29,7 +27,7 @@ const avatarFallbackBg = '#616161';
 const pages = [
   { name: 'Home', link: '/' },
   { name: 'Courses', link: '/courses' },
-  { name: 'Assignments', link: '/assignments' }, 
+  { name: 'Assignments', link: '/assignments' },
   { name: 'Grades', link: '/grades' },
   { name: 'Help', link: '/help' },
   { name: 'Info', link: '/info' },
@@ -58,6 +56,23 @@ const managementMenu = {
 };
 
 const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
+
+// Helper component for rendering management menu items
+const ManagementMenuItems = ({ items, onNavigate, itemStyles }) => {
+  return (
+    <>
+      {items.map((item, index) =>
+        item.isDivider ? (
+          <Divider key={`divider-${index}`} sx={{ my: 0.5 }} />
+        ) : (
+          <MenuItem key={item.name} onClick={() => onNavigate(item.link)} sx={itemStyles}>
+            <Typography textAlign="center">{item.name}</Typography>
+          </MenuItem>
+        )
+      )}
+    </>
+  );
+};
 
 
 function ResponsiveAppBar() {
@@ -137,13 +152,7 @@ function ResponsiveAppBar() {
               transformOrigin={{ vertical: 'top', horizontal: 'left' }}
               PaperProps={{ sx: { backgroundColor: menuBg } }}
             >
-              {managementMenu.items.map((item, index) => (
-                item.isDivider
-                  ? <Divider key={`divider-${index}`} sx={{ my: 0.5 }} />
-                  : <MenuItem key={item.name} onClick={() => handleNavigate(item.link)} sx={menuItemStyles}>
-                      <Typography textAlign="center">{item.name}</Typography>
-                    </MenuItem>
-              ))}
+              <ManagementMenuItems items={managementMenu.items} onNavigate={handleNavigate} itemStyles={menuItemStyles} />
             </Menu>
           </Box>
 
@@ -180,13 +189,7 @@ function ResponsiveAppBar() {
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
                 PaperProps={{ sx: { backgroundColor: menuBg } }}
               >
-                {managementMenu.items.map((item, index) => (
-                  item.isDivider
-                    ? <Divider key={`divider-${index}`} sx={{ my: 0.5 }} />
-                    : <MenuItem key={item.name} onClick={() => handleNavigate(item.link)} sx={menuItemStyles}>
-                        <Typography textAlign="center">{item.name}</Typography>
-                      </MenuItem>
-                ))}
+                <ManagementMenuItems items={managementMenu.items} onNavigate={handleNavigate} itemStyles={menuItemStyles} />
               </Menu>
             </Box>
           </Box>

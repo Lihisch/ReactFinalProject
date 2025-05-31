@@ -24,7 +24,7 @@ import './App.css';
 const STUDENTS_STORAGE_KEY = 'students';
 const COURSES_STORAGE_KEY = 'courses';
 const ASSIGNMENTS_STORAGE_KEY = 'assignments';
-const GRADES_STORAGE_KEY = 'grades'; // Consider merging with submissions later if redundant
+// const GRADES_STORAGE_KEY = 'grades'; // Consider merging with submissions later if redundant
 const SUBMISSIONS_STORAGE_KEY = 'submissions';
 
 // --- Define Initial Seed Data ---
@@ -123,14 +123,6 @@ function App() {
         localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(initialAssignments));
       } else {
         // console.log('LocalStorage: Assignments already exist.');
-      }
-
-      // Check and seed grades (Consider removing if submissions is the single source of truth for grades)
-      if (localStorage.getItem(GRADES_STORAGE_KEY) === null) {
-        console.log('LocalStorage: Initializing grades...');
-        localStorage.setItem(GRADES_STORAGE_KEY, JSON.stringify(initialGrades));
-      } else {
-        // console.log('LocalStorage: Grades already exist.');
       }
 
       // Check and seed submissions

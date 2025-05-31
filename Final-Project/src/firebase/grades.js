@@ -26,7 +26,7 @@ export const getAllSubmissions = async () => {
     }));
   } catch (error) {
     console.error("Error getting submissions:", error);
-    throw error;
+    return [];
   }
 };
 
@@ -50,12 +50,12 @@ export const getSubmissionsByCourse = async (courseId) => {
 };
 
 // Get submissions by course and assignment
-export const getSubmissionsByCourseAndAssignment = async (courseId, assignmentCode) => {
+export const getSubmissionsByCourseAndAssignment = async (courseId, assignmentId) => {
   try {
     const q = query(
       collection(firestore, SUBMISSIONS_COLLECTION),
       where('courseId', '==', courseId),
-      where('assignmentCode', '==', assignmentCode),
+      where('assignmentId', '==', assignmentId),
       orderBy('submissionDate', 'desc')
     );
     const querySnapshot = await getDocs(q);
@@ -70,12 +70,12 @@ export const getSubmissionsByCourseAndAssignment = async (courseId, assignmentCo
 };
 
 // Get submission by student and assignment
-export const getSubmissionByStudentAndAssignment = async (studentId, assignmentCode) => {
+export const getSubmissionByStudentAndAssignment = async (studentId, assignmentId) => {
   try {
     const q = query(
       collection(firestore, SUBMISSIONS_COLLECTION),
       where('studentId', '==', studentId),
-      where('assignmentCode', '==', assignmentCode)
+      where('assignmentId', '==', assignmentId)
     );
     const querySnapshot = await getDocs(q);
     if (querySnapshot.empty) return null;
@@ -98,9 +98,13 @@ export const saveSubmission = async (submissionData) => {
     const submissionWithTimestamp = {
       ...submissionData,
       submissionId: logicalSubmissionId,
+      assignmentId: String(assignmentId),
+      courseId: String(courseId),
+      studentId: String(studentId),
       lastUpdated: serverTimestamp()
     };
-    await addDoc(collection(firestore, SUBMISSIONS_COLLECTION), submissionWithTimestamp);
+    const docRef = doc(firestore, SUBMISSIONS_COLLECTION, logicalSubmissionId);
+    await setDoc(docRef, submissionWithTimestamp, { merge: true });
     return logicalSubmissionId;
   } catch (error) {
     console.error("Error saving submission:", error);
