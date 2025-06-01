@@ -101,7 +101,8 @@ export const createSubmission = async (submissionData) => {
       createdAt: serverTimestamp(),
       lastUpdated: serverTimestamp()
     };
-    await addDoc(collection(firestore, SUBMISSIONS_COLLECTION), submissionWithTimestamp);
+    const docRef = doc(firestore, SUBMISSIONS_COLLECTION, logicalSubmissionId);
+    await setDoc(docRef, submissionWithTimestamp, { merge: true });
     return logicalSubmissionId;
   } catch (error) {
     console.error("Error creating submission:", error);

@@ -273,6 +273,14 @@ export default function GradesManagement() {
                 );
 
                 // Create grade record
+                let submissionStatus = STATUS_NO_SUBMISSION;
+                if (submission) {
+                    if (submission.grade !== null && submission.grade !== undefined && !isNaN(submission.grade)) {
+                        submissionStatus = STATUS_GRADED;
+                    } else {
+                        submissionStatus = STATUS_PENDING;
+                    }
+                }
                 const gradeRecord = {
                     studentId: studentId,
                     studentName: studentNames.get(studentId) || 'Unknown Student',
@@ -280,7 +288,7 @@ export default function GradesManagement() {
                     assignmentId: String(assignmentId),
                     assignmentName: assignment.assignmentName || `Assignment ${assignmentId}`,
                     assignmentWeight: assignment.weight || 0,
-                    submissionStatus: submission ? (submission.grade !== null ? STATUS_GRADED : STATUS_PENDING) : STATUS_NO_SUBMISSION,
+                    submissionStatus,
                     grade: submission?.grade ?? null,
                     comments: submission?.comments ?? '',
                 };
@@ -666,7 +674,7 @@ export default function GradesManagement() {
                           variant="outlined"
                           color={
                             item.submissionStatus === STATUS_GRADED ? 'success' :
-                            item.submissionStatus === STATUS_PENDING ? 'warning' :
+                            item.submissionStatus === STATUS_PENDING ? 'info' :
                             item.submissionStatus === STATUS_NO_SUBMISSION ? 'error' :
                             'default'
                           }

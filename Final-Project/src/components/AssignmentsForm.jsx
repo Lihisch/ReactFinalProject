@@ -52,9 +52,9 @@ export default function AssignmentForm() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        setIsLoading(true);
+    setIsLoading(true);
         const coursesData = await listCourses();
-        setCourseOptions(coursesData);
+      setCourseOptions(coursesData);
 
         if (isEditMode || isCopyMode) {
           const assignments = await listAssignments();
@@ -98,9 +98,9 @@ export default function AssignmentForm() {
       } catch (error) {
         console.error("Error loading data:", error);
         setSnackbar({ open: true, message: 'Error loading data', severity: 'error' });
-      } finally {
-        setIsLoading(false);
-      }
+    } finally {
+      setIsLoading(false);
+    }
     };
 
     loadData();
@@ -252,7 +252,7 @@ export default function AssignmentForm() {
         {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
             <CircularProgress sx={{ color: colors.green }} /> <Typography sx={{ ml: 2 }}>Loading...</Typography>
-          </Box>
+      </Box>
         ) : (
           <Grid container spacing={2}>
             {/* Row 1: Code & Name */}
@@ -278,7 +278,7 @@ export default function AssignmentForm() {
                 error={!!errors.assignmentName}
                 helperText={errors.assignmentName}
               />
-            </Grid>
+      </Grid>
 
             {/* Row 2: Course & Type */}
             <Grid item xs={12} sm={6}>
@@ -316,10 +316,10 @@ export default function AssignmentForm() {
                   <MenuItem value="" disabled><em>Select Type</em></MenuItem>
                   <MenuItem value="Individual">Individual</MenuItem>
                   <MenuItem value="Group">Group</MenuItem>
-                </Select>
+              </Select>
                 {errors.assignmentType && <FormHelperText>{errors.assignmentType}</FormHelperText>}
-              </FormControl>
-            </Grid>
+            </FormControl>
+          </Grid>
 
             {/* Row 3: Group Fields */}
             {formData.assignmentType === 'Group' && (
@@ -383,7 +383,7 @@ export default function AssignmentForm() {
                 error={!!errors.weight}
                 helperText={errors.weight}
               />
-            </Grid>
+        </Grid>
 
             {/* Row 5: Description */}
             <Grid item xs={12}>
@@ -404,7 +404,7 @@ export default function AssignmentForm() {
             <Grid item xs={12}>
               <Stack direction="row" spacing={2} alignItems="center">
                 <Button
-                  variant="outlined"
+                                variant="outlined"
                   component="label"
                   startIcon={<CloudUploadIcon />}
                   sx={{ padding: '10px 20px' }}

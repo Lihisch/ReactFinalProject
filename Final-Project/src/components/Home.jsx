@@ -317,8 +317,8 @@ const CompactListItem = ({ primary, secondaryLines = [], isCompleted = false }) 
   </ListItem> 
 );
 
-const OpenAssignmentsList = ({ assignments, coursesMap, loading }) => (
-  <DashboardCard title="Open Assignments" icon={<AssignmentTurnedInIcon />} loading={loading} navigateTo="/assignments">
+const OpenAssignmentsList = ({ assignments, coursesMap, loading, navigateTo }) => (
+  <DashboardCard title="Open Assignments" icon={<AssignmentTurnedInIcon />} loading={loading} navigateTo={navigateTo}>
     {assignments && assignments.length > 0 ? (
       <List dense>
         {assignments.map(assignment => {
@@ -728,6 +728,7 @@ export default function Home() {
                     assignments={studentOpenAssignments}
                     coursesMap={coursesMap}
                     loading={loadingStudentData || loadingInitial}
+                    navigateTo={selectedStudentId ? `/assignments?studentId=${selectedStudentId}` : '/assignments'}
                   />
                 </Grid>
                 <Grid item xs={12} md={6}>
