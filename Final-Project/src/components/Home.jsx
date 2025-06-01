@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom'; // Import useSearchParams
 import {
   Container, Grid, Typography, CircularProgress, Alert, Box, Paper,
   Select, MenuItem, FormControl, InputLabel, List, ListItem, ListItemText,
@@ -342,8 +342,10 @@ const OpenAssignmentsList = ({ assignments, coursesMap, loading, navigateTo }) =
   </DashboardCard>
 );
 
-const RecentGradesSummary = ({ submissions, assignmentsMap, coursesMap, loading }) => (
-  <DashboardCard title="Recent Grades" icon={<GradeIcon />} loading={loading} navigateTo="/grades">
+const RecentGradesSummary = ({ submissions, assignmentsMap, coursesMap, loading, navigateTo }) => {
+  // console.log('[RecentGradesSummary] Props received. navigateTo:', navigateTo); // You can keep this log for debugging if needed
+  return (
+  <DashboardCard title="Recent Grades" icon={<GradeIcon />} loading={loading} navigateTo={navigateTo}>
     {submissions && submissions.length > 0 ? (
       <List dense>
         {submissions.slice(0, 3).map(sub => {
@@ -374,8 +376,8 @@ const RecentGradesSummary = ({ submissions, assignmentsMap, coursesMap, loading 
     ) : (
       <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', pt: 2 }}>No recent grades.</Typography>
     )}
-  </DashboardCard>
-);
+  </DashboardCard>);
+};
 
 const StudentStatistics = ({ stats, loading }) => (
   <Card elevation={3} sx={{ mt: 2.5, borderRadius: 2 }}>
@@ -489,7 +491,10 @@ const EnrolledCoursesList = ({ courses, loading, navigateTo }) => {
 // Modified DashboardCard to accept a headerAction prop
 const DashboardCard = ({ title, icon, children, loading, navigateTo, headerAction }) => {
   const navigate = useNavigate();
-  const handleCardClick = () => navigateTo && navigate(navigateTo);
+  const handleCardClick = () => {
+    console.log('[DashboardCard] handleCardClick triggered. Navigating to:', navigateTo);
+    if (navigateTo) navigate(navigateTo);
+  };
 
   return (
     <Card
@@ -535,6 +540,7 @@ export default function Home() {
   const [loadingStudentData, setLoadingStudentData] = useState(false);
   const [error, setError] = useState(null);
   const [studentEnrolledCoursesDetails, setStudentEnrolledCoursesDetails] = useState([]);
+  const [searchParams, setSearchParams] = useSearchParams(); // Initialize useSearchParams
 
   const coursesMap = useMemo(() => new Map(allCoursesMaster.map(course => [course.courseId, course])), [allCoursesMaster]);
   const assignmentsMap = useMemo(() => new Map(allAssignmentsMaster.map(asm => [asm.assignmentId, asm])), [allAssignmentsMaster]);
@@ -561,6 +567,29 @@ export default function Home() {
     };
     fetchInitialData();
   }, []);
+
+  // New useEffect to handle studentId from URL parameters
+  useEffect(() => {
+    const studentIdFromUrl = searchParams.get('studentId');
+
+    // Ensure allStudents is loaded before trying to set from URL
+    if (studentIdFromUrl && allStudents.length > 0) {
+      const studentExists = allStudents.some(s => s.studentId === studentIdFromUrl);
+      if (studentExists) {
+        if (selectedStudentId !== studentIdFromUrl) {
+          setSelectedStudentId(studentIdFromUrl);
+          // Optional: Clean the URL parameter after using it if you don't want it to persist on reloads
+          // searchParams.delete('studentId');
+          // setSearchParams(searchParams, { replace: true });
+        }
+      } else {
+        console.warn(`[Home.jsx] Student ID "${studentIdFromUrl}" from URL parameter not found in the loaded students list.`);
+        // Optionally, clear the invalid studentId from the URL
+        // searchParams.delete('studentId');
+        // setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, allStudents, selectedStudentId, setSelectedStudentId, setSearchParams]);
 
 
   useEffect(() => {
@@ -732,11 +761,15 @@ export default function Home() {
                   />
                 </Grid>
                 <Grid item xs={12} md={6}>
+              {console.log('[Home.jsx] Preparing RecentGradesSummary. Selected Student ID:', selectedStudentId)}
                   <RecentGradesSummary
                     submissions={studentRecentSubmissions}
                     assignmentsMap={assignmentsMap}
                     coursesMap={coursesMap}
                     loading={loadingStudentData || loadingInitial}
+                    navigateTo={selectedStudentId ? `/grades?studentId=${selectedStudentId}` : '/grades'}
+                // Log the actual path being passed
+                _debug_navigateTo_prop_for_grades={selectedStudentId ? `/grades?studentId=${selectedStudentId}` : '/grades'}
                   />
                 </Grid>
               </Grid>

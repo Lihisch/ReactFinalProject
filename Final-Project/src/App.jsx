@@ -100,6 +100,7 @@ function App() {
         <Route path="/studentform/:studentId" element={<StudentForm />} />
         <Route path="/enrollmentform" element={<EnrollmentForm />} />
         <Route path="/gradesmanagement" element={<GradesManagement />} />
+        <Route path="/gradesmanagement/:courseId/:studentId" element={<GradesManagement />} />
         <Route path="/gradesform" element={<GradesForm />} />
         <Route path="/assignmentsmanagement" element={<AssignmentsManagement />} />
         <Route path="/assignmentsform" element={<AssignmentsForm />} />

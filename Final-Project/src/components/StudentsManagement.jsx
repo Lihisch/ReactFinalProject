@@ -23,7 +23,7 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import TablePagination from '@mui/material/TablePagination';
-import { listStudents, updateStudent } from '../firebase/students';
+import { listStudents, updateStudent, deleteStudentAndAssociatedData } from '../firebase/students'; // Added deleteStudentAndAssociatedData
 import { listCourses } from '../firebase/courses';
 
 
@@ -297,20 +297,22 @@ export default function StudentsManagement() {
     setConfirmDeleteDialogOpen(false);
     setStudentToDelete(null);
   };
-
-  const handleConfirmDelete = (studentIdToDelete) => {
-    const idStr = String(studentIdToDelete ?? '');
-    if (idStr === '') return;
-
-    const studentInfo = students.find(s => String(s.studentId) === idStr);
-    const studentDisplayName = studentInfo ? `${studentInfo.firstName || ''} ${studentInfo.lastName || ''}`.trim() : `ID: ${idStr}`;
+  
+  const handleConfirmDelete = async (studentToDeleteData) => {
+    if (!studentToDeleteData || !studentToDeleteData.id || !studentToDeleteData.studentId) {
+      setSnackbar({ open: true, message: 'Error: Invalid student data for deletion.', severity: 'error' });
+      handleCloseDeleteDialog();
+      return;
+    }
+  
+    const studentFirestoreId = studentToDeleteData.id; // Firestore document ID
+    const studentBusinessId = studentToDeleteData.studentId; // Business ID (e.g., T.Z.)
+    const studentDisplayName = `${studentToDeleteData.firstName || ''} ${studentToDeleteData.lastName || ''}`.trim() || `ID: ${studentBusinessId}`;
+  
     try {
-      // TODO: Delete student from Firebase here
-      const updatedStudents = students.filter(s => String(s.studentId) !== idStr);
-      const currentSubmissions = safeJsonParse(SUBMISSIONS_STORAGE_KEY);
-      const updatedSubmissions = currentSubmissions.filter(sub => String(sub?.studentId) !== idStr);
-      localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updatedStudents)); // Keep for now, or remove if Firebase is sole source
-      localStorage.setItem(SUBMISSIONS_STORAGE_KEY, JSON.stringify(updatedSubmissions));
+      await deleteStudentAndAssociatedData(studentFirestoreId, studentBusinessId); // Firebase call
+  
+      const updatedStudents = students.filter(s => s.id !== studentFirestoreId);
       setStudents(updatedStudents);
       setSnackbar({ open: true, message: `Student ${studentDisplayName} and their submissions removed successfully.`, severity: 'success' });
     } catch (saveError) {
@@ -318,7 +320,7 @@ export default function StudentsManagement() {
       setSnackbar({ open: true, message: `Failed to remove student ${studentDisplayName}.`, severity: 'error' });
     } finally {
       handleCloseDeleteDialog();
-      setSelected(prev => prev.filter(id => String(id) !== idStr));
+      setSelected(prev => prev.filter(id => String(id) !== String(studentBusinessId)));
     }
   };
 
@@ -391,22 +393,31 @@ export default function StudentsManagement() {
       return selected.some(id => String(id) === String(studentId));
   }
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
       setIsLoading(true);
       try {
-          // TODO: Delete selected students from Firebase here (batch delete if possible)
-          const studentsToDeleteIds = new Set(selected.map(String));
-          const updatedStudents = students.filter(s => !studentsToDeleteIds.has(String(s.studentId)));
-          const currentSubmissions = safeJsonParse(SUBMISSIONS_STORAGE_KEY);
-          const updatedSubmissions = currentSubmissions.filter(sub => !studentsToDeleteIds.has(String(sub?.studentId)));
-          localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updatedStudents)); // Keep for now, or remove if Firebase is sole source
-          localStorage.setItem(SUBMISSIONS_STORAGE_KEY, JSON.stringify(updatedSubmissions));
+          const deletePromises = [];
+          const studentsToDeleteFromState = [];
+
+          for (const businessId of selected) {
+            const studentInfo = students.find(s => String(s.studentId) === String(businessId));
+            if (studentInfo && studentInfo.id) { // studentInfo.id is Firestore Doc ID
+              deletePromises.push(deleteStudentAndAssociatedData(studentInfo.id, studentInfo.studentId));
+              studentsToDeleteFromState.push(studentInfo.id); // Store Firestore ID for local state update
+            } else {
+              console.warn(`Could not find Firestore ID for student with business ID: ${businessId}`);
+            }
+          }
+
+          await Promise.all(deletePromises);
+          
+          const updatedStudents = students.filter(s => !studentsToDeleteFromState.includes(s.id));
           setStudents(updatedStudents);
           setSnackbar({ open: true, message: `${selected.length} student(s) and their submissions removed successfully.`, severity: 'success' });
           setSelected([]);
       } catch (saveError) {
           console.error("Error removing selected students:", saveError);
-          setSnackbar({ open: true, message: 'Failed to remove selected students.', severity: 'error' });
+          setSnackbar({ open: true, message: 'Failed to remove selected students. Some operations might have failed.', severity: 'error' });
       } finally {
           setIsLoading(false);
       }
@@ -709,7 +720,7 @@ export default function StudentsManagement() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDeleteDialog} color="primary">Cancel</Button>
-          <Button onClick={() => handleConfirmDelete(studentToDelete?.studentId)} color="error" autoFocus>
+          <Button onClick={() => handleConfirmDelete(studentToDelete)} color="error" autoFocus>
             Remove Student
           </Button>
         </DialogActions>

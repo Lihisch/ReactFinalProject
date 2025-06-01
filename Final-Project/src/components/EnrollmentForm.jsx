@@ -85,7 +85,12 @@ export default function EnrollmentForm() {
   // Update selected student data when ID changes
   useEffect(() => {
     if (isValidId(selectedStudentId)) {
-      setIsLoading(true);
+      // If allStudents is not yet populated and initial data is still loading,
+      // we return early. The effect will re-run when allStudents or isLoading changes.
+      if (isLoading && allStudents.length === 0) {
+        return;
+      }
+
       const foundStudent = allStudents.find(s => String(s.studentId) === String(selectedStudentId));
 
       if (foundStudent) {
@@ -93,19 +98,25 @@ export default function EnrollmentForm() {
         const initiallyEnrolled = new Set((foundStudent.enrolledCourses || []).map(String));
         setInitialEnrollmentIds(initiallyEnrolled);
         setSelectedCourseIds(new Set(initiallyEnrolled));
+        setError(null); // Clear any previous "not found" error for this ID
       } else {
-        console.error(`EnrollmentForm Error: Student with selected ID ${selectedStudentId} not found in loaded students.`);
-        setError(`Student with ID ${selectedStudentId} not found.`);
-        setSelectedStudentId('');
+        // Only set error if not in the initial loading phase of allStudents
+        // or if allStudents is populated but the student is genuinely not found.
+        if (!isLoading || allStudents.length > 0) {
+          console.error(`EnrollmentForm Error: Student with selected ID ${selectedStudentId} not found in loaded students.`);
+          setError(`Student with ID ${selectedStudentId} not found.`);
+        }
+        setStudent(null); // Ensure student state is cleared if not found
         setInitialEnrollmentIds(new Set());
+        setSelectedCourseIds(new Set());
       }
-      setIsLoading(false);
     } else {
       setStudent(null);
       setInitialEnrollmentIds(new Set());
       setSelectedCourseIds(new Set());
+      setError(null); // Clear error if ID becomes invalid (e.g., empty)
     }
-  }, [selectedStudentId, allStudents]);
+  }, [selectedStudentId, allStudents, isLoading]); // Added isLoading to dependency array
 
   const handleStudentSelectChange = (event) => {
     setSelectedStudentId(event.target.value);
@@ -129,17 +140,31 @@ export default function EnrollmentForm() {
       return;
     }
 
+    // Log the student object and selected course IDs before attempting to save
+    console.log("EnrollmentForm handleSubmit: Student object being processed:", JSON.parse(JSON.stringify(student)));
+    console.log("EnrollmentForm handleSubmit: Student Firestore ID (student.id):", student?.id);
+    console.log("EnrollmentForm handleSubmit: Student Business ID (student.studentId):", student?.studentId);
+    const coursesToEnroll = Array.from(selectedCourseIds);
+    console.log("EnrollmentForm handleSubmit: Course IDs to enroll:", coursesToEnroll);
+
     try {
-      const updatedEnrolledCourses = Array.from(selectedCourseIds);
       if (!student || !student.id) {
+        console.error("EnrollmentForm Error: Student data or Firestore ID is missing just before calling updateStudent. Student object:", student);
         throw new Error("Student data or Firestore ID is missing.");
       }
-      await updateStudent({ ...student, enrolledCourses: updatedEnrolledCourses });
+
+      const studentPayload = { ...student, enrolledCourses: coursesToEnroll };
+      console.log("EnrollmentForm: Payload being sent to updateStudent:", JSON.parse(JSON.stringify(studentPayload)));
+
+      await updateStudent(studentPayload);
 
       setSnackbar({ open: true, message: 'Enrollment updated successfully!', severity: 'success' });
-      setTimeout(() => {
-        navigate('/studentsmanagement');
-      }, 1500);
+      // Optionally, update local 'allStudents' state for immediate UI reflection if not navigating away instantly
+      setAllStudents(prevAllStudents => prevAllStudents.map(s =>
+        s.id === student.id ? { ...s, enrolledCourses: coursesToEnroll } : s
+      ));
+
+      setTimeout(() => navigate('/studentsmanagement'), 1500);
     } catch (err) {
       console.error("Error updating enrollment:", err);
       let errorMessage = 'Error updating enrollment.';

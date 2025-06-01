@@ -47,49 +47,79 @@ export default function Grades() {
   const [assignments, setAssignments] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [searchParams] = useSearchParams();
-  const [loading, setLoading] = useState(true);
+
+  const [masterDataLoading, setMasterDataLoading] = useState(true); // טעינת נתונים כללית (סטודנטים, קורסים, מטלות)
+  const [isResolvingUrlStudent, setIsResolvingUrlStudent] = useState(false); // האם אנחנו בתהליך בחירת סטודנט מה-URL
+  const [submissionsLoading, setSubmissionsLoading] = useState(false); // טעינת הגשות עבור הסטודנט הנבחר
+
   const [openAssignmentDialog, setOpenAssignmentDialog] = useState(false);
   const [dialogAssignment, setDialogAssignment] = useState(null);
 
-  useEffect(() => {
-    const urlStudentId = searchParams.get('studentId');
-    if (urlStudentId) {
-      setSelectedStudent(urlStudentId);
-    } else {
-      setSelectedStudent('');
-    }
-  }, [searchParams]);
-
+  // Effect 1: טעינת נתונים ראשיים (סטודנטים, קורסים, מטלות)
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+      setMasterDataLoading(true);
       try {
         const [studentsData, coursesData, assignmentsData] = await Promise.all([
           listStudents(),
           listCourses(),
           listAssignments()
         ]);
-        setStudents(studentsData);
+        // מיון סטודנטים לתצוגה עקבית ברשימה הנפתחת
+        setStudents(studentsData.sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)));
         setCourses(coursesData);
         setAssignments(assignmentsData);
       } catch (err) {
+        console.error("Error fetching master data for Grades page:", err);
         setStudents([]);
         setCourses([]);
         setAssignments([]);
       } finally {
-        setLoading(false);
+        setMasterDataLoading(false);
       }
     };
     fetchData();
   }, []);
 
+  // Effect 2: טיפול בבחירת סטודנט מפרמטר בכתובת ה-URL
+  useEffect(() => {
+    const urlStudentId = searchParams.get('studentId');
+    if (urlStudentId) {
+      setIsResolvingUrlStudent(true); // התחלנו לנסות לבחור סטודנט מה-URL
+      // נמשיך רק אם טעינת הנתונים הראשיים (ובפרט רשימת הסטודנטים) הסתיימה
+      if (!masterDataLoading) {
+        if (students.length > 0) {
+          const studentExists = students.some(s => String(s.studentId).trim() === String(urlStudentId).trim());
+          if (studentExists) {
+            setSelectedStudent(urlStudentId);
+          } else {
+            setSelectedStudent(''); // סטודנט מה-URL לא נמצא ברשימה
+          }
+        } else {
+          // נטענו נתונים ראשיים, אך אין סטודנטים ברשימה
+          setSelectedStudent('');
+        }
+        setIsResolvingUrlStudent(false); // סיימנו את ניסיון הבחירה מה-URL
+      }
+      // אם masterDataLoading עדיין true, האפקט הזה ירוץ שוב כאשר masterDataLoading ישתנה ל-false
+    } else {
+      setSelectedStudent(''); // אין studentId ב-URL
+      setIsResolvingUrlStudent(false); // לא מנסים לבחור סטודנט מה-URL
+    }
+  }, [searchParams, students, masterDataLoading]); // תלויות: פרמטרים מה-URL, רשימת הסטודנטים, ומצב טעינת הנתונים הראשיים
+
+  // Effect 3: טעינת הגשות עבור הסטודנט הנבחר
   useEffect(() => {
     if (selectedStudent) {
-      getSubmissionsByStudent(selectedStudent).then(setSubmissions).catch(() => setSubmissions([]));
+      setSubmissionsLoading(true);
+      getSubmissionsByStudent(selectedStudent)
+        .then(setSubmissions)
+        .catch(() => setSubmissions([]))
+        .finally(() => setSubmissionsLoading(false));
     } else {
       setSubmissions([]);
     }
-  }, [selectedStudent]);
+  }, [selectedStudent, isResolvingUrlStudent]); // תלוי גם ב-isResolvingUrlStudent כדי לא לטעון הגשות לפני שהסטודנט מה-URL "ננעל"
 
   // Group grades by semester > course
   const grouped = useMemo(() => {
@@ -170,12 +200,21 @@ export default function Grades() {
     return { bg: '#fbeaea', color: '#b71c1c' };
   };
 
+  // משתנה מאוחד הקובע אם להציג חיווי טעינה ראשי לדף
+  const showPageLoadingIndicator = masterDataLoading || isResolvingUrlStudent;
+
   return (
     <Box sx={{ backgroundColor: themeColors.background, minHeight: 'calc(100vh - 64px)', py: 4 }}>
       <Container maxWidth={false} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Box sx={{ width: '100%', maxWidth: 1300, mb: 2 }}>
+        <Box sx={{ width: '100%', maxWidth: 1300, mb: 2, alignSelf: 'flex-start' /* Ensure breadcrumbs align left with container */ }}>
           <Breadcrumbs aria-label="breadcrumb">
-            <MuiLink component={RouterLink} underline="hover" sx={{ display: 'flex', alignItems: 'center' }} color="inherit" to="/">
+            <MuiLink
+              component={RouterLink}
+              underline="hover"
+              sx={{ display: 'flex', alignItems: 'center' }}
+              color="inherit"
+              to={selectedStudent ? `/?studentId=${selectedStudent}` : "/"} // Pass studentId if selected
+            >
               <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
               Home
             </MuiLink>
@@ -217,7 +256,7 @@ export default function Grades() {
                 onChange={e => setSelectedStudent(e.target.value)}
                 sx={{ bgcolor: themeColors.paper }}
               >
-                <MenuItem value="">
+                <MenuItem value="" disabled={masterDataLoading && students.length === 0}> {/* מניעת בחירה אם עדיין טוען סטודנטים */}
                   <em>None</em>
                 </MenuItem>
                 {students.map((student) => (
@@ -228,17 +267,21 @@ export default function Grades() {
               </Select>
             </FormControl>
           </Paper>
-          {loading ? (
+          {showPageLoadingIndicator ? ( // הצג חיווי טעינה ראשי
             <Box sx={{ textAlign: 'center', py: 6 }}>
               <Typography variant="h6" color="textSecondary">Loading grades...</Typography>
             </Box>
-          ) : !selectedStudent ? (
+          ) : !selectedStudent ? ( // אם אין סטודנט נבחר (לאחר שכל הטעינות הסתיימו)
             <Paper elevation={3} sx={{ p: 3, textAlign: 'center', borderRadius: 2, backgroundColor: themeColors.paper }}>
               <Typography variant="h6" sx={{ color: themeColors.textSecondary }}>
                 Please select a student to view their grades.
               </Typography>
             </Paper>
-          ) : Object.keys(grouped).length === 0 ? (
+          ) : submissionsLoading ? ( // אם נבחר סטודנט אבל עדיין טוענים את ההגשות שלו
+            <Box sx={{ textAlign: 'center', py: 6 }}>
+              <Typography variant="h6" color="textSecondary">Loading student's grades data...</Typography>
+            </Box>
+          ) : Object.keys(grouped).length === 0 && !masterDataLoading && !isResolvingUrlStudent ? ( // אם אין ציונים להצגה (לאחר שכל הטעינות הסתיימו)
             <Box sx={{ textAlign: 'center', mt: 4 }}>
               <Typography variant="h6" color="textSecondary">
                 No grades found for the selected student.

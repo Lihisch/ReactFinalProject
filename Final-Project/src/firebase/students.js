@@ -1,5 +1,5 @@
-import { addDoc, collection, getDocs, doc, getDoc, setDoc } from "firebase/firestore"
-import { firestore } from "./firebase-settings"
+import { addDoc, collection, getDocs, doc, getDoc, setDoc, deleteDoc, query, where, writeBatch } from "firebase/firestore"; // Added deleteDoc, query, where, writeBatch
+import { firestore } from "./firebase-settings";
 
 export async function addStudent(student) {
   try {
@@ -10,6 +10,37 @@ export async function addStudent(student) {
     throw error;
   }
 }
+
+export const deleteStudentAndAssociatedData = async (studentFirestoreId, studentBusinessId) => {
+  if (!studentFirestoreId) {
+    console.error("deleteStudentAndAssociatedData Error: Student Firestore ID is required.");
+    throw new Error("Student Firestore ID is required to delete a student.");
+  }
+  if (!studentBusinessId) {
+    // It's good practice to also require the business ID if you're deleting associated data by it.
+    console.error("deleteStudentAndAssociatedData Error: Student Business ID is required for deleting associated submissions.");
+    throw new Error("Student Business ID is required to delete associated submissions.");
+  }
+
+  const batch = writeBatch(firestore);
+
+  // 1. Delete the student document
+  const studentRef = doc(firestore, 'students', studentFirestoreId);
+  batch.delete(studentRef);
+
+  // 2. Find and delete all submissions associated with the student (using studentBusinessId)
+  const submissionsQuery = query(
+    collection(firestore, 'submissions'), // Assuming 'submissions' is your submissions collection name
+    where('studentId', '==', studentBusinessId) // Assuming 'studentId' in submissions matches studentBusinessId
+  );
+
+  const submissionsSnapshot = await getDocs(submissionsQuery);
+  submissionsSnapshot.forEach((submissionDoc) => {
+    batch.delete(submissionDoc.ref);
+  });
+
+  await batch.commit();
+};
 
 export async function listStudents() {
   try {

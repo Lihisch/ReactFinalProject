@@ -1,6 +1,6 @@
 // src/components/GradesManagement.jsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, Link as RouterLink, useParams } from 'react-router-dom';
 import {
   Container, Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton, Tooltip, Chip,
@@ -58,6 +58,7 @@ const calculateMedian = (numbers) => {
 
 export default function GradesManagement() {
   const navigate = useNavigate();
+  const params = useParams(); // Get URL parameters
 
   const [courses, setCourses] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -202,6 +203,17 @@ export default function GradesManagement() {
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
+
+  useEffect(() => {
+    // Set initial filters if courseId and studentId are present in URL params
+    if (params.courseId) {
+      setSelectedCourse(params.courseId);
+    }
+    if (params.studentId) {
+      // Use studentId from URL param to set the search term for student filtering
+      setSearchTerm(params.studentId);
+    }
+  }, [params.courseId, params.studentId]); // Re-run if URL params change
 
   const processedGrades = useMemo(() => {
     if (!selectedCourse) {

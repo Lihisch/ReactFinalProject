@@ -29,9 +29,9 @@ import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import FilterListIcon from '@mui/icons-material/FilterList'; // Added for filters
 import ClearIcon from '@mui/icons-material/Clear'; // Added for clearing search/filters
 import { listCourses, deleteCourses, addCourse } from '../firebase/courses';
-import { isPast, parseISO as dateFnsParseISO, isFuture, isEqual, isToday } from 'date-fns';
+import { isPast, parseISO as dateFnsParseISO, isFuture, isEqual, isToday, isValid as isValidDate } from 'date-fns';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'; // For status icon
-import { listStudents } from '../firebase/students';
+import { listStudents, updateStudent } from '../firebase/students';
 
 const STUDENTS_STORAGE_KEY = 'students';
 // const COURSES_STORAGE_KEY = 'courses'; // Not used in current logic for courses, Firebase is primary
@@ -215,7 +215,13 @@ export default function CoursesManagement() {
           setSnackbar({ open: true, message: 'Error: Invalid course data format received.', severity: 'error' });
         }
         if (Array.isArray(studentsData)) {
-          setStudents(studentsData);
+          // Ensure students have 'id' (Firestore doc ID) and 'enrolledCourses' array
+          const processedStudents = studentsData.map(student => ({
+            ...student,
+            id: student.id, // Ensure Firestore document ID is explicitly carried over
+            enrolledCourses: Array.isArray(student.enrolledCourses) ? student.enrolledCourses : []
+          }));
+          setStudents(processedStudents);
         } else {
           console.warn("Firebase: Invalid student data received", studentsData);
           setStudents([]);
@@ -399,17 +405,35 @@ export default function CoursesManagement() {
     try {
       await deleteCourses(idsToDelete); // Firebase call
       setCourses(prev => prev.filter(c => !idsToDelete.includes(c.courseId)));
-      const updatedStudents = students.map(student => {
+      
+      // Update students locally and prepare for Firebase update
+      const studentsToUpdateInFirebase = [];
+      const updatedLocalStudents = students.map(student => {
+        const originalEnrolledCount = student.enrolledCourses?.length || 0;
         const newEnrolledCourses = student.enrolledCourses?.filter(id => !idsToDelete.includes(id));
-        return { ...student, enrolledCourses: newEnrolledCourses };
+        if (newEnrolledCourses.length < originalEnrolledCount) {
+          const updatedStudent = { ...student, enrolledCourses: newEnrolledCourses };
+          studentsToUpdateInFirebase.push(updatedStudent); // Add to list for Firebase update
+          return updatedStudent;
+        }
+        return student;
       });
-      setStudents(updatedStudents);
-      // TODO: Persist student changes to Firebase if necessary
-      // For example, loop through updatedStudents and call updateStudent for each changed student.
-      // This can be complex if many students are affected. A batch update or cloud function might be better.
+      setStudents(updatedLocalStudents);
+
+      // Persist student changes to Firebase
+      // This should ideally be a batch update if many students are affected.
+      // For simplicity, we'll update one by one here.
+      // Consider a Cloud Function for large-scale unenrollments.
+      for (const studentToUpdate of studentsToUpdateInFirebase) {
+        if (studentToUpdate.id) { // Ensure Firestore document ID is present
+          await updateStudent(studentToUpdate);
+        } else {
+          console.warn("Skipping Firebase update for student due to missing ID:", studentToUpdate);
+        }
+      }
 
       setSelected([]);
-      setSnackbar({ open: true, message: `${idsToDelete.length} course(s) deleted successfully.`, severity: 'success' });
+      setSnackbar({ open: true, message: `${idsToDelete.length} course(s) deleted successfully. Student enrollments updated.`, severity: 'success' });
     } catch (error) {
       console.error("CourseManagement: Error deleting course(s):", error);
       setSnackbar({ open: true, message: 'Error deleting course(s).', severity: 'error' });
@@ -418,23 +442,26 @@ export default function CoursesManagement() {
     }
   }, [deleteConfirm, selected, students]);
 
-  const handleUnenroll = (studentIdToUnenroll) => {
+  const handleUnenroll = async (studentIdToUnenroll) => {
     if (!enrollmentCourse || !studentIdToUnenroll) return;
     const courseId = enrollmentCourse.courseId;
 
     try {
       const studentToUpdate = students.find(s => s.studentId === studentIdToUnenroll);
-      if (studentToUpdate) {
-        const updatedEnrolledCourses = (studentToUpdate.enrolledCourses || []).filter(id => id !== courseId);
-        // TODO: Update student in Firebase here
-        // await updateStudent(studentToUpdate.id, { enrolledCourses: updatedEnrolledCourses });
-        // For optimistic UI update:
+      if (studentToUpdate && studentToUpdate.id) { // Ensure student and its Firestore ID exist
+        const currentEnrolledCourses = Array.isArray(studentToUpdate.enrolledCourses) ? studentToUpdate.enrolledCourses : [];
+        const updatedEnrolledCourses = currentEnrolledCourses.filter(id => id !== courseId);
+        
+        await updateStudent({ ...studentToUpdate, enrolledCourses: updatedEnrolledCourses });
+        
         const updatedStudents = students.map(s =>
           s.studentId === studentIdToUnenroll ? { ...s, enrolledCourses: updatedEnrolledCourses } : s
         );
         setStudents(updatedStudents);
         setEnrollmentStudentsList(prev => prev.filter(s => s.studentId !== studentIdToUnenroll));
         setSnackbar({ open: true, message: `Student unenrolled from ${enrollmentCourse.courseName}.`, severity: 'success' });
+      } else {
+         throw new Error("Student not found or missing Firestore ID for unenrollment.");
       }
     } catch (error) {
       console.error("Error unenrolling student:", error);
@@ -442,25 +469,28 @@ export default function CoursesManagement() {
     }
   };
 
-  const handleEnroll = () => {
+  const handleEnroll = async () => {
     if (!enrollmentCourse || !selectedStudentToEnroll) return;
     const courseId = enrollmentCourse.courseId;
     const studentIdToEnroll = selectedStudentToEnroll.studentId;
 
     try {
       const studentToUpdate = students.find(s => s.studentId === studentIdToEnroll);
-      if (studentToUpdate) {
-        const updatedEnrolledCourses = [...new Set([...(studentToUpdate.enrolledCourses || []), courseId])];
-        // TODO: Update student in Firebase here
-        // await updateStudent(studentToUpdate.id, { enrolledCourses: updatedEnrolledCourses });
-        // For optimistic UI update:
+      if (studentToUpdate && studentToUpdate.id) { // Ensure student and its Firestore ID exist
+        const currentEnrolledCourses = Array.isArray(studentToUpdate.enrolledCourses) ? studentToUpdate.enrolledCourses : [];
+        const updatedEnrolledCourses = [...new Set([...currentEnrolledCourses, courseId])];
+
+        await updateStudent({ ...studentToUpdate, enrolledCourses: updatedEnrolledCourses });
+
         const updatedStudents = students.map(s =>
           s.studentId === studentIdToEnroll ? { ...s, enrolledCourses: updatedEnrolledCourses } : s
         );
         setStudents(updatedStudents);
-        setEnrollmentStudentsList(prev => [...prev, selectedStudentToEnroll]);
+        setEnrollmentStudentsList(prev => [...prev, selectedStudentToEnroll].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)));
         setSelectedStudentToEnroll(null);
         setSnackbar({ open: true, message: `Student enrolled in ${enrollmentCourse.courseName}.`, severity: 'success' });
+      } else {
+        throw new Error("Student not found or missing Firestore ID for enrollment.");
       }
     } catch (error) {
       console.error("Error enrolling student:", error);
@@ -513,7 +543,9 @@ export default function CoursesManagement() {
   const enrollableStudents = useMemo(() => {
     if (!enrollmentCourse || !students || !enrollmentStudentsList) return [];
     const enrolledIds = new Set(enrollmentStudentsList.map(s => s.studentId));
-    return students.filter(s => !enrolledIds.has(s.studentId));
+    return students
+      .filter(s => !enrolledIds.has(s.studentId))
+      .sort((a,b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
   }, [students, enrollmentStudentsList, enrollmentCourse]);
 
   const sortedEnrollmentStudents = useMemo(() => {

@@ -304,9 +304,15 @@ export default function Assignments() {
   return (
     <Box sx={{ backgroundColor: themeColors.background, minHeight: 'calc(100vh - 64px)', py: 4 }}>
       <Container maxWidth={false} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Box sx={{ width: '100%', maxWidth: 1300, mb: 2 }}>
+        <Box sx={{ width: '100%', maxWidth: 1300, mb: 2, alignSelf: 'flex-start' }}>
           <Breadcrumbs aria-label="breadcrumb">
-            <MuiLink component={RouterLink} underline="hover" sx={{ display: 'flex', alignItems: 'center' }} color="inherit" to="/">
+            <MuiLink
+              component={RouterLink}
+              underline="hover"
+              sx={{ display: 'flex', alignItems: 'center' }}
+              color="inherit"
+              to={selectedStudent ? `/?studentId=${selectedStudent}` : "/"} // Pass studentId if selected
+            >
               <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
               Home
             </MuiLink>

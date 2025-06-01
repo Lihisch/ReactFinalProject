@@ -111,7 +111,16 @@ export default function AssignmentForm() {
     if (!formData.courseId) temp.courseId = 'Course is required.';
     if (!formData.assignmentName.trim()) temp.assignmentName = 'Assignment Name is required.';
     if (!formData.assignmentType) temp.assignmentType = 'Assignment Type is required.';
-    if (!formData.dueDate) temp.dueDate = 'Due Date is required.';
+    if (!formData.dueDate) {
+      temp.dueDate = 'Due Date is required.';
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Normalize today to the start of the day
+      const dueDate = new Date(formData.dueDate);
+      if (dueDate < today) {
+        temp.dueDate = 'Due Date cannot be in the past. Please select today or a future date.';
+      }
+    }
 
     // Weight validation
     const weightValue = parseFloat(formData.weight);
