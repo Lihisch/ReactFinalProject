@@ -76,17 +76,13 @@ const formatDate = (dateStr) => {
   }
 };
 
-// Helper for semester order
-const semesterOrder = [
-  'A', 'א', 'a', 'סמסטר א', 'Semester A',
-  'B', 'ב', 'b', 'סמסטר ב', 'Semester B',
-  'Summer', 'קיץ', 'summer', 'סמסטר קיץ', 'Semester Summer'
-];
+// Helper for semester order (English only)
+const semesterOrder = ['A', 'B', 'Summer'];
 const getSemesterIndex = (semester) => {
   const s = String(semester).toLowerCase();
-  if (s.includes('a') || s.includes('א')) return 0;
-  if (s.includes('b') || s.includes('ב')) return 1;
-  if (s.includes('summer') || s.includes('קיץ')) return 2;
+  if (s === 'a' || s === 'semester a') return 0;
+  if (s === 'b' || s === 'semester b') return 1;
+  if (s === 'summer' || s === 'semester summer') return 2;
   return 99;
 };
 
@@ -106,6 +102,8 @@ const Courses = () => {
     const urlStudentId = searchParams.get('studentId');
     if (urlStudentId) {
       setSelectedStudent(urlStudentId);
+    } else {
+      setSelectedStudent('');
     }
   }, [searchParams]);
 

@@ -94,6 +94,10 @@ function ResponsiveAppBar() {
   const handleCloseUserMenu = () => setAnchorElUser(null);
 
   const handleNavigate = (link) => {
+    if (link === '/assignments' || link === '/courses' || link === '/grades' || link === '/') {
+      window.location.href = link;
+      return;
+    }
     navigate(link);
     handleCloseNavMenu();
     handleCloseUserMenu();
