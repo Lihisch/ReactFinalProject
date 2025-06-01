@@ -422,7 +422,7 @@ const EnrolledCoursesList = ({ courses, loading, navigateTo }) => {
       title="My Courses" // Changed title here
       icon={<ClassIcon />}
       loading={loading}
-      navigateTo={!showCompleted ? navigateTo : undefined} // Navigate only if not showing completed, or adjust as needed
+      navigateTo={navigateTo} // Navigate only if not showing completed, or adjust as needed
       headerAction={ // Pass the switch as an action to the CardHeader
         <FormControlLabel
           control={<Switch checked={showCompleted} onChange={handleShowCompletedChange} size="small" sx={{'.MuiSwitch-track': {backgroundColor: showCompleted ? themeColors.primaryDark : ''}}} />}
@@ -720,7 +720,7 @@ export default function Home() {
                   <EnrolledCoursesList
                     courses={studentEnrolledCoursesDetails}
                     loading={loadingStudentData || loadingInitial}
-                    navigateTo="/courses"
+                    navigateTo={selectedStudentId ? `/courses?studentId=${selectedStudentId}` : '/courses'}
                   />
                 </Grid>
                 <Grid item xs={12} md={6}>

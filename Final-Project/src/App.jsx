@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import Home from './components/Home';
@@ -95,53 +95,62 @@ const initialSubmissions = [
   { studentId: "449182736", courseId: "N2001", assignmentCode: "001", submitted: true, submissionDate: "2024-12-15", grade: 85, comments: "Well done." },
 ];
 
-
 function App() {
+  const [userType, setUserType] = useState('admin');
+  const [studentId, setStudentId] = useState('');
+  const [students, setStudents] = useState([]);
 
   useEffect(() => {
+    // Load students from localStorage
+    const stored = localStorage.getItem(STUDENTS_STORAGE_KEY);
+    if (stored) {
+      setStudents(JSON.parse(stored));
+    }
+
     // --- Initialize Local Storage if empty ---
     try {
       // Check and seed students
       if (localStorage.getItem(STUDENTS_STORAGE_KEY) === null) {
         console.log('LocalStorage: Initializing students...');
         localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(initialStudents));
-      } else {
-        // console.log('LocalStorage: Students already exist.'); // Optional: uncomment for debugging
       }
 
       // Check and seed courses
       if (localStorage.getItem(COURSES_STORAGE_KEY) === null) {
         console.log('LocalStorage: Initializing courses...');
         localStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify(initialCourses));
-      } else {
-        // console.log('LocalStorage: Courses already exist.');
       }
 
       // Check and seed assignments
       if (localStorage.getItem(ASSIGNMENTS_STORAGE_KEY) === null) {
         console.log('LocalStorage: Initializing assignments...');
         localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(initialAssignments));
-      } else {
-        // console.log('LocalStorage: Assignments already exist.');
       }
 
       // Check and seed submissions
       if (localStorage.getItem(SUBMISSIONS_STORAGE_KEY) === null) {
         console.log('LocalStorage: Initializing submissions...');
         localStorage.setItem(SUBMISSIONS_STORAGE_KEY, JSON.stringify(initialSubmissions));
-      } else {
-        // console.log('LocalStorage: Submissions already exist.');
       }
 
     } catch (error) {
       console.error("LocalStorage: Error during initialization:", error);
-      // Handle potential storage errors (e.g., storage full, security restrictions)
-      // You might want to show a user-facing error message here
     }
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []); 
+
+  const handleRoleChange = (newRole) => {
+    setUserType(newRole);
+    if (newRole === 'admin') {
+      setStudentId('');
+    }
+  };
+
+  const handleStudentChange = (newStudentId) => {
+    setStudentId(newStudentId);
+  };
 
   return (
-    <div>
+    <div className="container">
       <Header />
       <Routes>
         <Route path="/" element={<Home />} />
