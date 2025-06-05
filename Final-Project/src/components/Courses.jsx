@@ -27,7 +27,8 @@ import {
   ListItemSecondaryAction,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  TextField
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import SchoolIcon from '@mui/icons-material/School';
@@ -38,10 +39,10 @@ import StarIcon from '@mui/icons-material/Star';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Link as RouterLink, useSearchParams } from 'react-router-dom';
-import { listStudents } from '../firebase/students';
+import { listStudents, updateStudent } from '../firebase/students';
 import { listCourses } from '../firebase/courses';
 import { listAssignments } from '../firebase/assignments';
-import { isPast, parseISO, isValid as isValidDate } from 'date-fns';
+import { isPast, parseISO, isValid as isValidDate, isAfter } from 'date-fns';
 import { getSubmissionsByStudent } from '../firebase/submissions';
 
 const themeColors = {
@@ -96,6 +97,13 @@ const Courses = () => {
   const [courseDetailsDialog, setCourseDetailsDialog] = useState({ open: false, course: null });
   const [loading, setLoading] = useState(true);
   const [submissions, setSubmissions] = useState([]);
+  const [openRegisterDialog, setOpenRegisterDialog] = useState(false);
+  const [registerSemester, setRegisterSemester] = useState('');
+  const [registerCourseId, setRegisterCourseId] = useState('');
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [registerError, setRegisterError] = useState('');
+  const [registerSuccess, setRegisterSuccess] = useState(false);
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
 
   // Set studentId from URL on mount
   useEffect(() => {
@@ -107,26 +115,27 @@ const Courses = () => {
     }
   }, [searchParams]);
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [studentsData, coursesData, assignmentsData] = await Promise.all([
+        listStudents(),
+        listCourses(),
+        listAssignments()
+      ]);
+      setStudents(studentsData);
+      setCourses(coursesData);
+      setAssignments(assignmentsData);
+    } catch (err) {
+      setStudents([]);
+      setCourses([]);
+      setAssignments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [studentsData, coursesData, assignmentsData] = await Promise.all([
-          listStudents(),
-          listCourses(),
-          listAssignments()
-        ]);
-        setStudents(studentsData);
-        setCourses(coursesData);
-        setAssignments(assignmentsData);
-      } catch (err) {
-        setStudents([]);
-        setCourses([]);
-        setAssignments([]);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
@@ -173,6 +182,67 @@ const Courses = () => {
   // Get assignments for a specific course
   const getCourseAssignments = (courseId) => {
     return assignments.filter(a => a.courseId === courseId);
+  };
+
+  // Filter courses by semester for registration (only future courses)
+  const now = new Date();
+  const availableCoursesBySemester = (registerSemester && courses.length)
+    ? courses.filter(c => c.semester === registerSemester && c.startingDate && isAfter(parseISO(c.startingDate), now))
+    : [];
+
+  const handleOpenRegisterDialog = () => {
+    setRegisterSemester('');
+    setRegisterCourseId('');
+    setRegisterError('');
+    setOpenRegisterDialog(true);
+  };
+  const handleCloseRegisterDialog = () => {
+    setOpenRegisterDialog(false);
+    setRegisterSemester('');
+    setRegisterCourseId('');
+    setRegisterError('');
+  };
+  const handleRegister = async () => {
+    setRegisterError('');
+    setRegisterLoading(true);
+    try {
+      if (!selectedStudent || !registerCourseId) {
+        setRegisterError('Please select a semester and course.');
+        setRegisterLoading(false);
+        return;
+      }
+      // Find student object
+      const student = students.find(s => s.studentId === selectedStudent);
+      if (!student) {
+        setRegisterError('Student not found.');
+        setRegisterLoading(false);
+        return;
+      }
+      // Prevent duplicate registration
+      if (Array.isArray(student.enrolledCourses) && student.enrolledCourses.includes(registerCourseId)) {
+        setRegisterError('You are already enrolled in this course.');
+        setRegisterLoading(false);
+        return;
+      }
+      // Update student in Firebase
+      const updatedStudent = {
+        ...student,
+        enrolledCourses: Array.isArray(student.enrolledCourses)
+          ? [...student.enrolledCourses, registerCourseId]
+          : [registerCourseId],
+      };
+      await updateStudent(updatedStudent);
+      setRegisterSuccess(true);
+      setTimeout(async () => {
+        setOpenRegisterDialog(false);
+        setRegisterSuccess(false);
+        await fetchData();
+      }, 1200);
+    } catch (err) {
+      setRegisterError('Registration failed.');
+    } finally {
+      setRegisterLoading(false);
+    }
   };
 
   return (
@@ -233,11 +303,20 @@ const Courses = () => {
                 </MenuItem>
                 {students.map((student) => (
                   <MenuItem key={student.studentId} value={student.studentId}>
-                    {student.firstName} {student.lastName} ({student.studentId})
+                    {student.lastName} - {student.firstName} ({student.studentId})
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
+            {selectedStudent && (
+              <Button
+                variant="contained"
+                sx={{ mt: 2, backgroundColor: themeColors.primaryDark, color: '#fff', fontWeight: 600, borderRadius: 2, textTransform: 'none', boxShadow: 'none', '&:hover': { backgroundColor: themeColors.primary } }}
+                onClick={handleOpenRegisterDialog}
+              >
+                Register to a Course
+              </Button>
+            )}
           </Paper>
 
           {loading ? (
@@ -524,6 +603,111 @@ const Courses = () => {
             </DialogActions>
           </>
         )}
+      </Dialog>
+
+      <Dialog open={openRegisterDialog} onClose={handleCloseRegisterDialog} maxWidth="sm" fullWidth
+        PaperProps={{
+          sx: { overflow: 'visible', maxHeight: 'none' }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, color: themeColors.primaryDark, fontSize: '1.5rem', pb: 0, borderBottom: '1.5px solid #e0e0e0', background: '#f7fafc', textAlign: 'center', letterSpacing: '.01em' }}>Course Registration</DialogTitle>
+        <DialogContent sx={{ p: 0, background: '#f7fafc', maxHeight: 'none', overflow: 'visible' }}>
+          <Box sx={{ mx: 'auto', maxWidth: 520, minWidth: 340, display: 'flex', flexDirection: 'column', alignItems: 'center', p: { xs: 2.5, sm: 4 } }}>
+            {registerSuccess ? (
+              <Typography color="success.main" sx={{ fontWeight: 500, textAlign: 'center', mb: 2, fontSize: '1.08rem' }}>Registration successful!</Typography>
+            ) : (
+              <>
+                <TextField
+                  select
+                  label="Semester"
+                  value={registerSemester}
+                  onChange={e => { setRegisterSemester(e.target.value); setRegisterCourseId(''); }}
+                  fullWidth
+                  margin="normal"
+                  variant="outlined"
+                  sx={{ mb: 3, mt: 2, background: '#fff', borderRadius: 2.5 }}
+                  InputLabelProps={{
+                    style: { color: themeColors.primaryDark, fontWeight: 500 }
+                  }}
+                >
+                  <MenuItem value=""><em>None</em></MenuItem>
+                  {semesterOrder.map(s => (
+                    <MenuItem key={s} value={s}>{s}</MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  label="Course"
+                  value={registerCourseId}
+                  onChange={e => setRegisterCourseId(e.target.value)}
+                  fullWidth
+                  margin="normal"
+                  variant="outlined"
+                  sx={{ mb: 3, background: '#fff', borderRadius: 2.5 }}
+                  InputLabelProps={{
+                    style: { color: themeColors.primaryDark, fontWeight: 500 }
+                  }}
+                  disabled={!registerSemester}
+                >
+                  <MenuItem value=""><em>None</em></MenuItem>
+                  {availableCoursesBySemester.length === 0 && registerSemester && (
+                    <MenuItem value="" disabled>No future courses available for this semester</MenuItem>
+                  )}
+                  {availableCoursesBySemester.map(c => (
+                    <MenuItem key={c.courseId} value={c.courseId}>{c.courseName}</MenuItem>
+                  ))}
+                </TextField>
+                {/* Show course details if a course is selected */}
+                {registerCourseId && (() => {
+                  const course = courses.find(c => c.courseId === registerCourseId);
+                  if (!course) return null;
+                  return (
+                    <Box sx={{ mt: 2.2, mb: 1.2, p: 2.5, background: '#fff', borderRadius: 2.5, boxShadow: '0 2px 8px #e0e0e0', border: '1.5px solid #e0e0e0', minWidth: 260, maxWidth: 420 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.2 }}>
+                        <SchoolIcon sx={{ color: themeColors.primaryDark, fontSize: '1.5rem', mr: 1 }} />
+                        <Typography variant="h6" sx={{ fontWeight: 600, color: '#222', fontSize: '1.1rem', letterSpacing: 0 }}>{course.courseName}</Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ color: '#444', mb: 0.7, fontWeight: 400, fontSize: '1rem' }}><b>Professor:</b> <span style={{ fontWeight: 400 }}>{course.professorsName}</span></Typography>
+                      <Typography variant="body2" sx={{ color: '#444', mb: 0.7, fontWeight: 400, fontSize: '1rem' }}><b>Schedule:</b> <span style={{ fontWeight: 400 }}>{course.dayOfWeek}, {course.courseHours}</span></Typography>
+                      <Typography variant="body2" sx={{ color: '#444', mb: 0.7, fontWeight: 400, fontSize: '1rem' }}><b>Start Date:</b> <span style={{ fontWeight: 400 }}>{course.startingDate}</span></Typography>
+                      <Typography variant="body2" sx={{ color: '#444', mb: 0.7, fontWeight: 400, fontSize: '1rem' }}><b>Credit Points:</b> <span style={{ fontWeight: 400 }}>{course.creditPoints}</span></Typography>
+                      <Typography variant="body2" sx={{ color: '#444', mb: 0.5, fontWeight: 400, fontSize: '1rem' }}><b>Description:</b> <span style={{ fontWeight: 400 }}>{course.description}</span></Typography>
+                    </Box>
+                  );
+                })()}
+                {registerError && <Typography color="error" sx={{ mb: 1, fontWeight: 400 }}>{registerError}</Typography>}
+              </>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 4, pb: 3, background: '#f7fafc', justifyContent: 'center' }}>
+          {!registerSuccess && (
+            <>
+              <Button onClick={handleCloseRegisterDialog} variant="outlined" sx={{ color: '#666', borderColor: '#e0e0e0', fontWeight: 400, fontSize: '1rem', minWidth: 100, height: 44, borderRadius: 2, mr: 2, background: '#fff', '&:hover': { borderColor: themeColors.primaryDark, background: '#f5f5f5' } }} disabled={registerLoading}>Cancel</Button>
+              <Button variant="contained" sx={{ backgroundColor: themeColors.primaryDark, color: '#fff', fontWeight: 500, borderRadius: 2, textTransform: 'none', fontSize: '1rem', minWidth: 120, height: 44, boxShadow: 'none', '&:hover': { backgroundColor: themeColors.primary } }} onClick={() => setRegisterError('') || setOpenConfirmDialog(true)} disabled={registerLoading || !registerSemester || !registerCourseId || registerSuccess || availableCoursesBySemester.length === 0}>
+                Register
+              </Button>
+            </>
+          )}
+        </DialogActions>
+      </Dialog>
+      <Dialog open={!!openConfirmDialog} onClose={() => setOpenConfirmDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, color: themeColors.primaryDark, fontSize: '1.1rem', pb: 0, background: '#f7fafc' }}>Confirm Registration</DialogTitle>
+        <DialogContent sx={{ p: 3, background: '#f7fafc' }}>
+          {registerCourseId && (() => {
+            const course = courses.find(c => c.courseId === registerCourseId);
+            if (!course) return null;
+            return (
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                Are you sure you want to register for <b>{course.courseName}</b> ({course.courseId})?
+              </Typography>
+            );
+          })()}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, background: '#f7fafc' }}>
+          <Button onClick={() => { setOpenConfirmDialog(false); handleCloseRegisterDialog(); }} sx={{ color: themeColors.primaryDark, fontWeight: 600 }}>Cancel</Button>
+          <Button variant="contained" sx={{ backgroundColor: themeColors.primaryDark, color: '#fff', fontWeight: 600, borderRadius: 2, textTransform: 'none', boxShadow: 'none', '&:hover': { backgroundColor: themeColors.primary } }} onClick={() => { setOpenConfirmDialog(false); handleRegister(); }}>Confirm</Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

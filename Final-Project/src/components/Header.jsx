@@ -9,28 +9,27 @@ import Typography from '@mui/material/Typography';
 import Menu from '@mui/material/Menu';
 import MenuIcon from '@mui/icons-material/Menu';
 import Container from '@mui/material/Container';
-import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
-import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 import SchoolIcon from '@mui/icons-material/School';
 import Divider from '@mui/material/Divider';
 
 const primaryGreen = '#bed630';
-const hoverGreen = '#a7bc2a';
-const textOnPrimary = '#000000';
+const primaryGreenDark = '#a7bc2a';
+const hoverGreen = '#9fb327';
+const textOnPrimary = '#2a2a2a';
 const menuBg = '#ffffff';
-const menuItemHoverBg = '#f5f5f5';
-const menuItemText = '#000000';
-const avatarFallbackBg = '#616161';
+const menuItemHoverBg = '#f8f9fa';
+const menuItemText = '#2c3e50';
+const headerShadow = '0 2px 12px rgba(0,0,0,0.1)';
 
 const pages = [
   { name: 'Home', link: '/' },
   { name: 'Courses', link: '/courses' },
   { name: 'Assignments', link: '/assignments' },
   { name: 'Grades', link: '/grades' },
-  { name: 'Help', link: '/help' },
   { name: 'Info', link: '/info' },
+  { name: 'Help', link: '/help' },
 ];
 
 const managementMenu = {
@@ -55,8 +54,6 @@ const managementMenu = {
   ],
 };
 
-const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
-
 // Helper component for rendering management menu items
 const ManagementMenuItems = ({ items, onNavigate, itemStyles }) => {
   return (
@@ -79,50 +76,80 @@ function ResponsiveAppBar() {
   const navigate = useNavigate();
 
   const [anchorElNav, setAnchorElNav] = useState(null);
-  const [anchorElUser, setAnchorElUser] = useState(null);
   const [anchorElDesktopManagement, setAnchorElDesktopManagement] = useState(null);
   const [anchorElMobileManagement, setAnchorElMobileManagement] = useState(null);
 
   const handleOpenNavMenu = (event) => setAnchorElNav(event.currentTarget);
-  const handleOpenUserMenu = (event) => setAnchorElUser(event.currentTarget);
   const handleOpenDesktopManagementMenu = (event) => setAnchorElDesktopManagement(event.currentTarget);
   const handleCloseDesktopManagementMenu = () => setAnchorElDesktopManagement(null);
   const handleOpenMobileManagementMenu = (event) => setAnchorElMobileManagement(event.currentTarget);
   const handleCloseMobileManagementMenu = () => setAnchorElMobileManagement(null);
 
   const handleCloseNavMenu = () => setAnchorElNav(null);
-  const handleCloseUserMenu = () => setAnchorElUser(null);
 
   const handleNavigate = (link) => {
-    if (link === '/assignments' || link === '/courses' || link === '/grades' || link === '/') {
+    if (link === '/assignments' || link === '/courses' || link === '/grades' || link === '/info' || link === '/') {
       window.location.href = link;
       return;
     }
     navigate(link);
     handleCloseNavMenu();
-    handleCloseUserMenu();
     handleCloseDesktopManagementMenu();
     handleCloseMobileManagementMenu();
   };
 
   const menuItemStyles = {
     color: menuItemText,
+    fontWeight: 500,
+    borderRadius: 1,
+    mx: 1,
+    my: 0.25,
     '&:hover': {
       backgroundColor: menuItemHoverBg,
+      transform: 'translateX(4px)',
     },
+    transition: 'all 0.2s ease',
   };
 
   return (
-    <AppBar position="static" sx={{ backgroundColor: primaryGreen }}>
+    <AppBar 
+      position="static" 
+      sx={{ 
+        background: `linear-gradient(135deg, ${primaryGreen} 0%, ${primaryGreenDark} 100%)`,
+        boxShadow: headerShadow,
+        borderBottom: `1px solid ${primaryGreenDark}`,
+      }}
+    >
       <Container maxWidth="xl">
         <Toolbar disableGutters>
-          <SchoolIcon sx={{ display: { xs: 'none', md: 'flex' }, mr: 1, color: textOnPrimary }} />
+          <SchoolIcon sx={{ 
+            display: { xs: 'none', md: 'flex' }, 
+            mr: 1.5, 
+            color: textOnPrimary,
+            fontSize: '2rem',
+            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))'
+          }} />
           <Typography
-            variant="h6" noWrap component="a" onClick={() => handleNavigate('/')}
+            variant="h5" 
+            noWrap 
+            component="a" 
+            onClick={() => handleNavigate('/')}
             sx={{
-              mr: 2, display: { xs: 'none', md: 'flex' }, fontFamily: 'monospace',
-              fontWeight: 700, letterSpacing: '.1rem', color: textOnPrimary,
-              textDecoration: 'none', cursor: 'pointer',
+              mr: 4, 
+              display: { xs: 'none', md: 'flex' }, 
+              fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif',
+              fontWeight: 800, 
+              letterSpacing: '.1rem', 
+              color: textOnPrimary,
+              textDecoration: 'none', 
+              cursor: 'pointer',
+              fontSize: '1.5rem',
+              textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'scale(1.02)',
+                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+              }
             }}
           >
             Ono Academy
@@ -138,7 +165,15 @@ function ResponsiveAppBar() {
               transformOrigin={{ vertical: 'top', horizontal: 'left' }}
               open={Boolean(anchorElNav)} onClose={handleCloseNavMenu}
               sx={{ display: { xs: 'block', md: 'none' } }}
-              PaperProps={{ sx: { backgroundColor: menuBg } }}
+              PaperProps={{ 
+                sx: { 
+                  backgroundColor: menuBg,
+                  borderRadius: 2,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                  border: '1px solid #e0e0e0',
+                  mt: 1
+                } 
+              }}
             >
               {pages.map((page) => (
                 <MenuItem key={page.name} onClick={() => handleNavigate(page.link)} sx={menuItemStyles}>
@@ -154,19 +189,49 @@ function ResponsiveAppBar() {
               open={Boolean(anchorElMobileManagement)} onClose={handleCloseMobileManagementMenu}
               anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
               transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-              PaperProps={{ sx: { backgroundColor: menuBg } }}
+              PaperProps={{ 
+                sx: { 
+                  backgroundColor: menuBg,
+                  borderRadius: 2,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                  border: '1px solid #e0e0e0',
+                  mt: 1
+                } 
+              }}
             >
               <ManagementMenuItems items={managementMenu.items} onNavigate={handleNavigate} itemStyles={menuItemStyles} />
             </Menu>
           </Box>
 
-          <SchoolIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1, color: textOnPrimary }} />
+          <SchoolIcon sx={{ 
+            display: { xs: 'flex', md: 'none' }, 
+            mr: 1, 
+            color: textOnPrimary,
+            fontSize: '1.8rem',
+            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))'
+          }} />
           <Typography
-            variant="h5" noWrap component="a" onClick={() => handleNavigate('/')}
+            variant="h5" 
+            noWrap 
+            component="a" 
+            onClick={() => handleNavigate('/')}
             sx={{
-              mr: 2, display: { xs: 'flex', md: 'none' }, flexGrow: 1, fontFamily: 'monospace',
-              fontWeight: 700, letterSpacing: '.1rem', color: textOnPrimary,
-              textDecoration: 'none', cursor: 'pointer',
+              mr: 2, 
+              display: { xs: 'flex', md: 'none' }, 
+              flexGrow: 1, 
+              fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif',
+              fontWeight: 700, 
+              letterSpacing: '.1rem', 
+              color: textOnPrimary,
+              textDecoration: 'none', 
+              cursor: 'pointer',
+              fontSize: '1.3rem',
+              textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'scale(1.02)',
+                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+              }
             }}
           >
             Ono Academy
@@ -174,15 +239,50 @@ function ResponsiveAppBar() {
 
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
             {pages.map((page) => (
-              <Button key={page.name} onClick={() => handleNavigate(page.link)}
-                sx={{ my: 2, color: textOnPrimary, display: 'block', '&:hover': { backgroundColor: hoverGreen } }}
+              <Button 
+                key={page.name} 
+                onClick={() => handleNavigate(page.link)}
+                sx={{ 
+                  my: 2, 
+                  mx: 0.5,
+                  px: 2.5,
+                  color: textOnPrimary, 
+                  display: 'block',
+                  fontWeight: 600,
+                  fontSize: '0.95rem',
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  transition: 'all 0.3s ease',
+                  '&:hover': { 
+                    backgroundColor: hoverGreen,
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                  }
+                }}
               >
                 {page.name}
               </Button>
             ))}
             <Box>
-              <Button onClick={handleOpenDesktopManagementMenu}
-                sx={{ my: 2, color: textOnPrimary, display: 'block', '&:hover': { backgroundColor: hoverGreen } }}
+              <Button 
+                onClick={handleOpenDesktopManagementMenu}
+                sx={{ 
+                  my: 2, 
+                  mx: 0.5,
+                  px: 2.5,
+                  color: textOnPrimary, 
+                  display: 'block',
+                  fontWeight: 600,
+                  fontSize: '0.95rem',
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  transition: 'all 0.3s ease',
+                  '&:hover': { 
+                    backgroundColor: hoverGreen,
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                  }
+                }}
               >
                 {managementMenu.name}
               </Button>
@@ -191,32 +291,19 @@ function ResponsiveAppBar() {
                 open={Boolean(anchorElDesktopManagement)} onClose={handleCloseDesktopManagementMenu}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                PaperProps={{ sx: { backgroundColor: menuBg } }}
+                PaperProps={{ 
+                  sx: { 
+                    backgroundColor: menuBg,
+                    borderRadius: 2,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                    border: '1px solid #e0e0e0',
+                    mt: 1
+                  } 
+                }}
               >
                 <ManagementMenuItems items={managementMenu.items} onNavigate={handleNavigate} itemStyles={menuItemStyles} />
               </Menu>
             </Box>
-          </Box>
-
-          <Box sx={{ flexGrow: 0 }}>
-            <Tooltip title="Open settings">
-              <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                <Avatar alt="User Avatar" src="/static/images/avatar/2.jpg" sx={{ bgcolor: avatarFallbackBg }} />
-              </IconButton>
-            </Tooltip>
-            <Menu
-              sx={{ mt: '45px' }} id="menu-appbar-user" anchorEl={anchorElUser}
-              anchorOrigin={{ vertical: 'top', horizontal: 'right' }} keepMounted
-              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-              open={Boolean(anchorElUser)} onClose={handleCloseUserMenu}
-              PaperProps={{ sx: { backgroundColor: menuBg } }}
-            >
-              {settings.map((setting) => (
-                <MenuItem key={setting} onClick={handleCloseUserMenu} sx={menuItemStyles}>
-                  <Typography textAlign="center">{setting}</Typography>
-                </MenuItem>
-              ))}
-            </Menu>
           </Box>
 
         </Toolbar>

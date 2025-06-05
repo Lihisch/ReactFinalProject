@@ -44,7 +44,7 @@ const getAssignmentStatus = (dueDateStr) => {
     if (!isValidDate(deadline)) return 'Invalid Date';
     return isPast(deadline) ? 'Past Due' : 'Active';
   } catch {
-    return 'Invalid Date';
+      return 'Invalid Date';
   }
 };
 
@@ -55,7 +55,7 @@ const formatDate = (dateStr) => {
     if (!isValidDate(date)) return 'Invalid Date';
     return format(date, 'MMM dd, yyyy');
   } catch {
-    return 'Invalid Date';
+      return 'Invalid Date';
   }
 };
 
@@ -71,7 +71,7 @@ function descendingComparator(a, b, orderBy, statusOrder) {
   } else if (typeof aValue === 'string' && typeof bValue === 'string') {
     aValue = aValue.toLowerCase();
     bValue = bValue.toLowerCase();
-  }
+    }
   if (bValue < aValue) return -1;
   if (bValue > aValue) return 1;
   return 0;
@@ -84,13 +84,13 @@ function getComparator(order, orderBy, statusOrder) {
 }
 
 function stableSort(array, comparator) {
-  const stabilizedThis = array.map((el, index) => [el, index]);
-  stabilizedThis.sort((a, b) => {
-    const order = comparator(a[0], b[0]);
-    if (order !== 0) return order;
-    return a[1] - b[1];
-  });
-  return stabilizedThis.map((el) => el[0]);
+    const stabilizedThis = array.map((el, index) => [el, index]);
+    stabilizedThis.sort((a, b) => { 
+        const order = comparator(a[0], b[0]); 
+        if (order !== 0) return order; 
+        return a[1] - b[1]; 
+    });
+    return stabilizedThis.map((el) => el[0]);
 }
 
 const STATUS_ORDER = {
@@ -184,14 +184,14 @@ export default function AssignmentsManagement() {
     });
     if (courseFilter) filtered = filtered.filter(assign => assign.courseId === courseFilter);
     if (statusFilter) filtered = filtered.filter(assign => assign.status === statusFilter);
-    if (searchTerm) {
-      const lowerSearchTerm = searchTerm.toLowerCase();
+        if (searchTerm) {
+            const lowerSearchTerm = searchTerm.toLowerCase();
       filtered = filtered.filter(assign =>
         assign.assignmentName?.toLowerCase().includes(lowerSearchTerm) ||
         assign.assignmentId?.toLowerCase().includes(lowerSearchTerm) ||
         assign.courseName?.toLowerCase().includes(lowerSearchTerm)
-      );
-    }
+            );
+        }
     return stableSort(filtered, getComparator(order, orderBy, STATUS_ORDER));
   }, [allAssignments, courseOptions, courseFilter, statusFilter, searchTerm, order, orderBy, courseEnrollmentCounts, assignmentSubmissionCounts]);
 
@@ -205,7 +205,7 @@ export default function AssignmentsManagement() {
   };
   const handleCopyAssignment = (assignmentId) => {
     if (!assignmentId) {
-      setSnackbar({ open: true, message: 'Invalid assignment ID for copy.', severity: 'error' });
+      setSnackbar({ open: true, message: 'Invalid assignment ID for duplicate.', severity: 'error' });
       return;
     }
     navigate(`/assignmentsform/copy/${assignmentId}`);
@@ -229,7 +229,7 @@ export default function AssignmentsManagement() {
   const handleOpenInfoDialog = (assignment) => {
     if (!assignment || !assignment.assignmentId) return;
     setViewInfo({ open: true, assignment });
-  };
+   };
   const handleCloseInfoDialog = () => setViewInfo({ open: false, assignment: null });
   const handleViewSubmissions = (assignment) => {
     if (!assignment || !assignment.assignmentId) return;
@@ -251,7 +251,7 @@ export default function AssignmentsManagement() {
     const studentsInCourse = allStudents.filter(student =>
       Array.isArray(student.enrolledCourses) &&
       student.enrolledCourses.map(cId => String(cId).trim()).includes(currentCourseIdStr)
-    );
+            );
     const studentSubmissionsData = studentsInCourse.map((student) => {
       const normalizedId = String(student.studentId).trim();
       const studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim() || `Student ${normalizedId}`;
@@ -261,14 +261,14 @@ export default function AssignmentsManagement() {
         studentName: studentName,
         status: hasSubmitted ? 'Submitted' : 'Not Submitted'
       };
-    });
-    setSubmissionsView({
-      open: true,
+            });
+            setSubmissionsView({
+                open: true,
       assignmentId: assignment.assignmentId,
-      assignmentName: assignment.assignmentName,
-      studentSubmissions: studentSubmissionsData,
-      loading: false
-    });
+                assignmentName: assignment.assignmentName,
+                studentSubmissions: studentSubmissionsData,
+                loading: false
+            });
   };
   const handleCloseSubmissionsDialog = () => setSubmissionsView({ open: false, assignmentId: null, assignmentName: '', studentSubmissions: [], loading: false });
   const handleCloseSnackbar = (event, reason) => { if (reason === 'clickaway') return; setSnackbar(prev => ({ ...prev, open: false })); };
@@ -283,7 +283,7 @@ export default function AssignmentsManagement() {
   const handleNavigateToGrading = (assignmentId, courseId) => {
     if (!assignmentId || !courseId) {
       setSnackbar({ open: true, message: 'Missing assignment or course ID.', severity: 'error' });
-      return;
+        return;
     }
     navigate(`/gradesform`, { state: { courseId: String(courseId), assignmentId } });
   };
@@ -349,8 +349,8 @@ export default function AssignmentsManagement() {
                   <TableCell key={headCell.id} align={headCell.align || (headCell.numeric ? 'center' : 'left')} sortDirection={orderBy === headCell.id ? order : false} >
                     {headCell.sortable === false ? headCell.label :
                       <TableSortLabel active={orderBy === headCell.id} direction={orderBy === headCell.id ? order : 'asc'} onClick={() => handleRequestSort(headCell.id)} sx={{ '&.MuiTableSortLabel-active': { color: colors.headerText }, '& .MuiTableSortLabel-icon': { color: `${colors.headerText} !important` } }} >
-                        {headCell.label} {orderBy === headCell.id ? (<Box component="span" sx={visuallyHidden}>{order === 'desc' ? 'sorted descending' : 'sorted ascending'}</Box>) : null}
-                      </TableSortLabel>
+                      {headCell.label} {orderBy === headCell.id ? (<Box component="span" sx={visuallyHidden}>{order === 'desc' ? 'sorted descending' : 'sorted ascending'}</Box>) : null}
+                    </TableSortLabel>
                     }
                   </TableCell>
                 ))}
@@ -365,38 +365,38 @@ export default function AssignmentsManagement() {
                 <TableRow> <TableCell colSpan={tableColSpan} align="center" sx={{ py: 4 }}> <Typography>No assignments match filters/search.</Typography> </TableCell> </TableRow>
               ) : (
                 paginatedAssignments.map((assign) => (
-                  <TableRow key={assign.assignmentId} hover sx={{ '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' } }}>
+                    <TableRow key={assign.assignmentId} hover sx={{ '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' } }}>
                     <TableCell>
                         <Chip label={assign.status} size="small" variant="outlined"
                             color={ assign.status === 'Active' ? 'success' : assign.status === 'Past Due' ? 'error' : 'default'}
                         />
                     </TableCell>
-                    <TableCell component="th" scope="row">{assign.assignmentId}</TableCell>
-                    <TableCell>{assign.assignmentName || 'N/A'}</TableCell>
+                      <TableCell component="th" scope="row">{assign.assignmentId}</TableCell>
+                      <TableCell>{assign.assignmentName || 'N/A'}</TableCell>
                     <TableCell> {assign.courseName} <Typography variant="caption" display="block">{assign.courseId}</Typography> </TableCell>
                     <TableCell> <Chip label={assign.assignmentType || 'N/A'} size="small" variant="outlined" color={assign.assignmentType === 'Group' ? 'primary' : 'default'} /> </TableCell>
                     <TableCell align="center">{assign.weight != null ? `${assign.weight}%` : 'N/A'}</TableCell>
                     <TableCell>{formatDate(assign.dueDate)}</TableCell>
-                    <TableCell>
+                      <TableCell>
                         <Tooltip title="View student submissions">
-                            <Chip
+                          <Chip
                                 icon={<PeopleIcon fontSize="small" />}
                                 label={`${assign.submittedCount} / ${assign.enrolledCount}`}
-                                size="small"
-                                variant="outlined"
+                            size="small"
+                            variant="outlined"
                                 onClick={() => handleViewSubmissions(assign)}
                                 sx={{ cursor: 'pointer' }}
                             />
                         </Tooltip>
-                    </TableCell>
+                      </TableCell>
                     <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
                       <Tooltip title="View Details"><IconButton size="small" onClick={() => handleOpenInfoDialog(assign)}><InfoIcon fontSize="inherit" /></IconButton></Tooltip>
                       <Tooltip title="Edit Assignment"><IconButton size="small" onClick={() => handleEditAssignment(assign.assignmentId)} color="primary"><EditIcon fontSize="inherit" /></IconButton></Tooltip>
-                      <Tooltip title="Copy Assignment"><IconButton size="small" onClick={() => handleCopyAssignment(assign.assignmentId)} color="secondary"><ContentCopyIcon fontSize="inherit" /></IconButton></Tooltip>
+                      <Tooltip title="Duplicate Assignment"><IconButton size="small" onClick={() => handleCopyAssignment(assign.assignmentId)} color="secondary"><ContentCopyIcon fontSize="inherit" /></IconButton></Tooltip>
                       <Tooltip title="Grade Assignment"><IconButton size="small" onClick={() => handleNavigateToGrading(assign.assignmentId, assign.courseId)} color="success" disabled={!assign.courseId}><GradingIcon fontSize="inherit" /></IconButton></Tooltip>
                       <Tooltip title="Delete Assignment"><IconButton size="small" onClick={() => handleOpenDeleteDialog(assign.assignmentId, assign.assignmentName)} color="error"><DeleteIcon fontSize="inherit" /></IconButton></Tooltip>
                     </TableCell>
-                  </TableRow>
+                    </TableRow>
                 ))
               )}
             </TableBody>

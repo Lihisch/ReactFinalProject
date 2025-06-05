@@ -105,6 +105,7 @@ function App() {
         <Route path="/assignmentsmanagement" element={<AssignmentsManagement />} />
         <Route path="/assignmentsform" element={<AssignmentsForm />} />
         <Route path="/assignmentsform/:assignmentId" element={<AssignmentsForm />} />
+        <Route path="/assignmentsform/copy/:assignmentId" element={<AssignmentsForm />} />
       </Routes>
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Container, Typography, Card, CardContent, Grid, FormControl, InputLabel, Select, MenuItem, Box, Divider, Paper, Chip, Breadcrumbs, Link as MuiLink, Button, Switch, FormControlLabel, Accordion, AccordionSummary, AccordionDetails, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Snackbar, Alert
+  Container, Typography, Card, CardContent, Grid, FormControl, InputLabel, Select, MenuItem, Box, Divider, Paper, Chip, Breadcrumbs, Link as MuiLink, Button, Switch, FormControlLabel, Accordion, AccordionSummary, AccordionDetails, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Snackbar, Alert, IconButton
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
@@ -9,12 +9,14 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import StarIcon from '@mui/icons-material/Star';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CloseIcon from '@mui/icons-material/Close';
 import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { listStudents } from '../firebase/students';
 import { listCourses } from '../firebase/courses';
 import { listAssignments } from '../firebase/assignments';
 import { isPast, parseISO, isValid as isValidDate } from 'date-fns';
 import { createSubmission, getSubmissionsByStudent } from '../firebase/submissions';
+import BarChartIcon from '@mui/icons-material/BarChart';
 
 const themeColors = {
   primary: '#bed630',
@@ -76,6 +78,8 @@ export default function Assignments() {
   const [successMessage, setSuccessMessage] = useState('');
   const [submissions, setSubmissions] = useState([]);
   const [searchParams] = useSearchParams();
+  const [openAssignmentDialog, setOpenAssignmentDialog] = useState(false);
+  const [dialogAssignment, setDialogAssignment] = useState(null);
 
   useEffect(() => {
     const urlStudentId = searchParams.get('studentId');
@@ -301,6 +305,16 @@ export default function Assignments() {
     );
   };
 
+  // Helper to get submission for assignment
+  const getSubmission = (assignment) => {
+    return submissions.find(
+      s => String(s.assignmentId).trim() === String(assignment.assignmentId).trim() &&
+        String(s.courseId).trim() === String(assignment.courseId).trim() &&
+        (String(s.studentId).trim() === String(selectedStudent).trim() ||
+          (Array.isArray(s.partnerIds) && s.partnerIds.includes(selectedStudent)))
+    );
+  };
+
   return (
     <Box sx={{ backgroundColor: themeColors.background, minHeight: 'calc(100vh - 64px)', py: 4 }}>
       <Container maxWidth={false} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -333,7 +347,7 @@ export default function Assignments() {
           </Box>
           <FormControlLabel
             control={<Switch checked={showCompleted} onChange={() => setShowCompleted(v => !v)} color="primary" />}
-            label="Show completed/past due"
+            label="View Overdue Assignments"
             sx={{ ml: 2, mr: 1, mt: 1 }}
           />
         </Box>
@@ -366,7 +380,7 @@ export default function Assignments() {
                 </MenuItem>
                 {students.map((student) => (
                   <MenuItem key={student.studentId} value={student.studentId}>
-                    {student.firstName} {student.lastName} ({student.studentId})
+                    {student.lastName} - {student.firstName} ({student.studentId})
                   </MenuItem>
                 ))}
               </Select>
@@ -449,7 +463,15 @@ export default function Assignments() {
                                       display: 'flex',
                                       flexDirection: 'column',
                                       height: '100%',
+                                      cursor: 'pointer',
                                     }}
+                                    onClick={() => setDialogAssignment({
+                                      ...assignment,
+                                      submission: getSubmission(assignment),
+                                      status: getAssignmentStatus(assignment.dueDate),
+                                      courseName: course?.courseName || '',
+                                      professorsName: course?.professorsName || '',
+                                    })}
                                   >
                                     <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 }, flex: 1, minHeight: 220, display: 'flex', flexDirection: 'column' }}>
                                       <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -541,7 +563,10 @@ export default function Assignments() {
                                             boxShadow: 'none',
                                             '&:hover': { backgroundColor: themeColors.primary },
                                           }}
-                                          onClick={() => handleOpenSubmitDialog(assignment)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleOpenSubmitDialog(assignment);
+                                          }}
                                         >
                                           Submit Assignment
                                         </Button>
@@ -670,6 +695,93 @@ export default function Assignments() {
           {successMessage || 'Submission successful!'}
         </Alert>
       </Snackbar>
+      <Dialog open={!!dialogAssignment} onClose={() => setDialogAssignment(null)} maxWidth="sm" fullWidth>
+        {dialogAssignment && (
+          <>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'linear-gradient(90deg, #f7fafc 0%, #e9ecef 100%)',
+              px: 3,
+              py: 2.2,
+              borderTopLeftRadius: 14,
+              borderTopRightRadius: 14,
+              borderBottom: '1.5px solid #e0e0e0',
+              boxShadow: '0 2px 8px #e0e0e0',
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AssignmentTurnedInIcon sx={{ color: themeColors.primaryDark, fontSize: '2.1rem', mr: 1 }} />
+                <Typography variant="h5" sx={{ color: themeColors.primaryDark, fontWeight: 700, fontSize: '1.25rem', letterSpacing: '.01em' }}>
+                  {dialogAssignment.assignmentName}
+                </Typography>
+              </Box>
+              <IconButton onClick={() => setDialogAssignment(null)} sx={{ color: themeColors.primaryDark, background: '#fff', ml: 1, '&:hover': { background: '#f5f5f5' } }}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+            <DialogContent sx={{ p: 0, background: '#f8faf5' }}>
+              <Box sx={{ p: { xs: 2, sm: 3 }, background: '#f7fafc', borderRadius: 3, boxShadow: '0 1px 8px #e0e0e0', minHeight: 320 }}>
+                <Typography variant="h6" sx={{ mb: 2.5, color: themeColors.primaryDark, fontWeight: 600, fontSize: '1.08rem' }}>
+                  Assignment Details
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={5} sm={4}><Typography variant="body2" sx={{ color: themeColors.textSecondary, fontWeight: 600 }}><b>Course</b></Typography></Grid>
+                  <Grid item xs={7} sm={8}><Typography variant="body2" sx={{ color: themeColors.textPrimary }}>{dialogAssignment.courseName}</Typography></Grid>
+                  <Grid item xs={5} sm={4}><Typography variant="body2" sx={{ color: themeColors.textSecondary, fontWeight: 600 }}><b>Professor</b></Typography></Grid>
+                  <Grid item xs={7} sm={8}><Typography variant="body2" sx={{ color: themeColors.textPrimary }}>{dialogAssignment.professorsName}</Typography></Grid>
+                  <Grid item xs={5} sm={4}><Typography variant="body2" sx={{ color: themeColors.textSecondary, fontWeight: 600 }}><b>Description</b></Typography></Grid>
+                  <Grid item xs={7} sm={8}><Typography variant="body2" sx={{ color: themeColors.textPrimary }}>{dialogAssignment.description || 'No description'}</Typography></Grid>
+                  <Grid item xs={5} sm={4}><Typography variant="body2" sx={{ color: themeColors.textSecondary, fontWeight: 600 }}><b>Weight</b></Typography></Grid>
+                  <Grid item xs={7} sm={8}><Typography variant="body2" sx={{ color: themeColors.textPrimary }}>{dialogAssignment.weight}%</Typography></Grid>
+                  <Grid item xs={5} sm={4}><Typography variant="body2" sx={{ color: themeColors.textSecondary, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}><CalendarTodayIcon sx={{ fontSize: '1.1rem', color: themeColors.primaryDark }} /> <b>Due Date</b></Typography></Grid>
+                  <Grid item xs={7} sm={8}><Typography variant="body2" sx={{ color: themeColors.textPrimary }}>{dialogAssignment.dueDate ? formatDate(dialogAssignment.dueDate) : 'N/A'}</Typography></Grid>
+                  <Grid item xs={5} sm={4}><Typography variant="body2" sx={{ color: themeColors.textSecondary, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}><AccessTimeIcon sx={{ fontSize: '1.1rem', color: themeColors.primaryDark }} /> <b>Status</b></Typography></Grid>
+                  <Grid item xs={7} sm={8}><Chip label={dialogAssignment.status} color={dialogAssignment.status === 'Active' ? 'success' : dialogAssignment.status === 'Past Due' ? 'error' : 'default'} size="small" sx={{ fontWeight: 600, fontSize: '0.97rem', backgroundColor: dialogAssignment.status === 'Active' ? '#eaf5d3' : dialogAssignment.status === 'Past Due' ? '#fbeaea' : '#f3f3f3', color: dialogAssignment.status === 'Active' ? themeColors.primaryDark : dialogAssignment.status === 'Past Due' ? '#b71c1c' : '#888', borderRadius: 1.5, px: 1.5, boxShadow: 'none', border: 'none' }} /></Grid>
+                  {/* GRADE - only if exists */}
+                  {dialogAssignment.submission && dialogAssignment.submission.grade !== undefined && dialogAssignment.submission.grade !== null && (
+                    <>
+                      <Grid item xs={5} sm={4}><Typography variant="body2" sx={{ color: themeColors.textSecondary, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}><StarIcon sx={{ fontSize: '1.1rem', color: themeColors.primaryDark }} /> <b>Grade</b></Typography></Grid>
+                      <Grid item xs={7} sm={8}><Chip label={dialogAssignment.submission.grade} color="success" size="small" sx={{ fontWeight: 600, fontSize: '0.97rem', backgroundColor: '#e3f7e8', color: '#2e7d32', borderRadius: 1.5, px: 1.5, boxShadow: 'none', border: 'none' }} /></Grid>
+                    </>
+                  )}
+                  {/* TYPE */}
+                  <Grid item xs={5} sm={4}><Typography variant="body2" sx={{ color: themeColors.textSecondary, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}><PersonIcon sx={{ fontSize: '1.1rem', color: themeColors.primaryDark }} /> <b>Type</b></Typography></Grid>
+                  <Grid item xs={7} sm={8}><Chip label={dialogAssignment.assignmentType === 'Group' ? 'Group Assignment' : 'Individual Assignment'} color={dialogAssignment.assignmentType === 'Group' ? 'info' : 'default'} size="small" sx={{ fontWeight: 600, fontSize: '0.97rem', backgroundColor: dialogAssignment.assignmentType === 'Group' ? '#e3f0fa' : '#f3f3f3', color: dialogAssignment.assignmentType === 'Group' ? '#1976d2' : '#888', borderRadius: 1.5, px: 1.5, boxShadow: 'none', border: 'none' }} /></Grid>
+                  {/* PARTNERS - only if there are actual partners */}
+                  {dialogAssignment.assignmentType === 'Group' && dialogAssignment.submission && Array.isArray(dialogAssignment.submission.partnerIds) && dialogAssignment.submission.partnerIds.length > 0 && (
+                    <>
+                      <Grid item xs={5} sm={4}><Typography variant="body2" sx={{ color: themeColors.textSecondary, fontWeight: 600 }}><b>Partners</b></Typography></Grid>
+                      <Grid item xs={7} sm={8}><Typography variant="body2" sx={{ color: themeColors.textPrimary }}>{dialogAssignment.submission.partnerIds.join(', ')}</Typography></Grid>
+                    </>
+                  )}
+                  {/* PARTICIPANTS RANGE - only if group assignment and no partners listed */}
+                  {dialogAssignment.assignmentType === 'Group' && (!dialogAssignment.submission || !Array.isArray(dialogAssignment.submission.partnerIds) || dialogAssignment.submission.partnerIds.length === 0) && (
+                    <>
+                      <Grid item xs={5} sm={4}><Typography variant="body2" sx={{ color: themeColors.textSecondary, fontWeight: 600 }}><b>Participants</b></Typography></Grid>
+                      <Grid item xs={7} sm={8}><Typography variant="body2" sx={{ color: themeColors.textPrimary }}>{dialogAssignment.minParticipants || 2} - {dialogAssignment.maxParticipants || 2}</Typography></Grid>
+                    </>
+                  )}
+                  {/* COMMENTS */}
+                  {dialogAssignment.submission && dialogAssignment.submission.comments && (
+                    <>
+                      <Grid item xs={5} sm={4}><Typography variant="body2" sx={{ color: themeColors.textSecondary, fontWeight: 600 }}><b>Comments</b></Typography></Grid>
+                      <Grid item xs={7} sm={8}><Typography variant="body2" sx={{ color: themeColors.textPrimary }}>{dialogAssignment.submission.comments}</Typography></Grid>
+                    </>
+                  )}
+                  {/* FILE */}
+                  {dialogAssignment.submission && dialogAssignment.submission.fileName && (
+                    <>
+                      <Grid item xs={5} sm={4}><Typography variant="body2" sx={{ color: themeColors.textSecondary, fontWeight: 600 }}><b>File</b></Typography></Grid>
+                      <Grid item xs={7} sm={8}><Typography variant="body2" sx={{ color: themeColors.textPrimary }}>{dialogAssignment.submission.fileName}</Typography></Grid>
+                    </>
+                  )}
+                </Grid>
+              </Box>
+            </DialogContent>
+          </>
+        )}
+      </Dialog>
     </Box>
   );
 }

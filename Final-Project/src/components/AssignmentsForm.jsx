@@ -23,9 +23,11 @@ const colors = {
 export default function AssignmentForm() {
   const navigate = useNavigate();
   const { assignmentId } = useParams();
-  const isEditMode = Boolean(assignmentId);
-  const isCopyMode = assignmentId?.startsWith('copy/');
-  const originalAssignmentId = isCopyMode ? assignmentId.replace('copy/', '') : null;
+  
+  // Check if we're in copy mode by looking at the route structure
+  const isCopyMode = window.location.pathname.includes('/copy/');
+  const isEditMode = Boolean(assignmentId) && !isCopyMode;
+  const originalAssignmentId = isCopyMode ? assignmentId : null;
 
   const initialFormData = {
     assignmentId: '',
@@ -77,7 +79,7 @@ export default function AssignmentForm() {
               }, 0);
               const nextId = (maxId + 1).toString().padStart(3, '0');
               newFormData.assignmentId = nextId;
-              newFormData.assignmentName = `${assignmentToEdit.assignmentName} (Copy)`;
+              newFormData.assignmentName = `${assignmentToEdit.assignmentName} (Duplicate)`;
             }
 
             setFormData(newFormData);
@@ -237,7 +239,7 @@ export default function AssignmentForm() {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  const pageTitle = isEditMode ? 'Edit Assignment' : isCopyMode ? 'Copy Assignment' : 'Create New Assignment';
+  const pageTitle = isEditMode ? 'Edit Assignment' : isCopyMode ? 'Duplicate Assignment' : 'Add New Assignment';
   const submitButtonText = isEditMode ? 'Update Assignment' : 'Add Assignment';
   const submitButtonIcon = isEditMode ? <SaveIcon /> : <AddIcon />;
 
@@ -250,7 +252,14 @@ export default function AssignmentForm() {
         <Link component={RouterLink} underline="hover" color="inherit" to="/AssignmentsManagement">
           Manage Assignments
         </Link>
-        <Typography color="text.primary">{isEditMode ? `Edit (${assignmentId})` : isCopyMode ? `Copy (${originalAssignmentId})` : 'Add New'}</Typography>
+        <Typography color="text.primary">
+          {isEditMode 
+            ? `Edit Assignment ${assignmentId}` 
+            : isCopyMode 
+            ? `Duplicate Assignment ${originalAssignmentId}` 
+            : 'Add New Assignment'
+          }
+        </Typography>
       </Breadcrumbs>
 
       <Box component="form" onSubmit={handleSubmit} sx={{ backgroundColor: colors.white, p: 4, borderRadius: 2, boxShadow: 3 }}>

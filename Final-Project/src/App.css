@@ -21,3 +21,20 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
+
+.recharts-bar-rectangle:hover,
+.recharts-bar-rectangle:active,
+.recharts-bar-rectangle.recharts-active-bar {
+  filter: none !important;
+  fill: inherit !important;
+  opacity: 1 !important;
+  stroke: none !important;
+}
+
+.recharts-bar-rectangle {
+  transition: none !important;
+}
+
+.recharts-bar-rectangle:focus {
+  outline: none !important;
+}

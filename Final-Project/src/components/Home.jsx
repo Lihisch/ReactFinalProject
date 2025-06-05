@@ -18,6 +18,7 @@ import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import GradeIcon from '@mui/icons-material/Grade';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ClassIcon from '@mui/icons-material/Class';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {
@@ -83,7 +84,7 @@ const themeColors = {
 };
 
 const StudentSelector = ({ students, selectedStudentId, onSelectStudent, loading }) => (
-  <Paper elevation={2} sx={{ p: 2, mb: 3, backgroundColor: themeColors.paper, borderRadius: 2 }}>
+  <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: themeColors.paper, borderRadius: 2, boxShadow: 'none' }}>
     <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', color: themeColors.textPrimary }}>
       Student Dashboard
     </Typography>
@@ -94,13 +95,14 @@ const StudentSelector = ({ students, selectedStudentId, onSelectStudent, loading
         value={selectedStudentId}
         label="Select Student"
         onChange={(e) => onSelectStudent(e.target.value)}
+        sx={{ bgcolor: themeColors.paper }}
       >
         <MenuItem value="">
           <em>{loading ? 'Loading students...' : students.length === 0 ? 'No students found' : '-- Select a Student --'}</em>
         </MenuItem>
         {students.map((student) => (
           <MenuItem key={student.studentId || student.id} value={student.studentId}>
-            {student.firstName} {student.lastName} ({student.studentId})
+            {student.lastName} - {student.firstName} ({student.studentId})
           </MenuItem>
         ))}
       </Select>
@@ -695,87 +697,114 @@ export default function Home() {
         sx={{
           backgroundColor: themeColors.background,
           minHeight: 'calc(100vh - 64px)',
-          py: 4,
-          display: 'flex',
-          justifyContent: 'center'
+          py: 4
         }}
       >
-        <Container
-          maxWidth={false}
-          sx={{
-            maxWidth: '1350px',
-            mx: 'auto',
-            px: { xs: 1.5, sm: 3, md: 4 },
-          }}>
-          <StudentSelector
-            students={allStudents}
-            selectedStudentId={selectedStudentId}
-            onSelectStudent={setSelectedStudentId}
-            loading={loadingInitial && allStudents.length === 0}
-          />
-
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-          {selectedStudentId && currentStudent && (
-            <Typography variant="h5" gutterBottom sx={{ mb: 2.5, textAlign: 'center', fontWeight: 'medium', color: themeColors.textPrimary }}>
-              Welcome, {currentStudent.firstName} {currentStudent.lastName}!
+        <Container maxWidth={false} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Box sx={{ width: '100%', maxWidth: 1300, mb: 1.5 }}>
+            <Typography variant="h4" component="h1" sx={{ 
+              fontWeight: 700, 
+              color: themeColors.primaryDark, 
+              mb: 0.2, 
+              letterSpacing: '.02em', 
+              fontSize: '1.5rem', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1 
+            }}>
+              <DashboardIcon fontSize="medium" sx={{ color: themeColors.primaryDark, mb: '-4px' }} />
+              Student Dashboard
             </Typography>
-          )}
+            <Typography variant="subtitle1" sx={{ 
+              color: themeColors.textSecondary, 
+              fontWeight: 400, 
+              fontSize: '0.98rem' 
+            }}>
+              Overview of your academic progress and upcoming activities
+            </Typography>
+          </Box>
 
-          {selectedStudentId && loadingStudentData && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
-              <CircularProgress sx={{ color: themeColors.primary }} />
-              <Typography sx={{ ml: 2, color: themeColors.textSecondary }}>Loading student dashboard...</Typography>
-            </Box>
-          )}
+          <Paper elevation={3} sx={{
+            p: { xs: 2.5, sm: 4 },
+            borderRadius: 3,
+            backgroundColor: themeColors.paper,
+            boxShadow: '0 2px 16px #e0e0e0',
+            minHeight: 400,
+            maxWidth: 1300,
+            width: '100%',
+            mx: 'auto',
+          }}>
+            <StudentSelector
+              students={allStudents}
+              selectedStudentId={selectedStudentId}
+              onSelectStudent={setSelectedStudentId}
+              loading={loadingInitial && allStudents.length === 0}
+            />
 
-          {!selectedStudentId && !loadingInitial && (
-            <Paper elevation={3} sx={{ p: 3, textAlign: 'center', borderRadius: 2, backgroundColor: themeColors.paper }}>
-              <Typography variant="h6" sx={{ color: themeColors.textSecondary }}>Please select a student to view their dashboard.</Typography>
-            </Paper>
-          )}
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-          {selectedStudentId && !loadingStudentData && !error && (
-            <>
-              <Grid container spacing={2.5}>
-                <Grid item xs={12} md={6}>
-                  <UpcomingEventsMiniCalendar
-                    openAssignments={studentOpenAssignments}
-                    enrolledCourses={studentEnrolledCoursesDetails}
-                    loading={loadingStudentData || loadingInitial}
-                  />
+            {selectedStudentId && currentStudent && (
+              <Typography variant="h5" gutterBottom sx={{ mb: 2.5, textAlign: 'center', fontWeight: 'medium', color: themeColors.textPrimary }}>
+                Welcome, {currentStudent.lastName} {currentStudent.firstName}!
+              </Typography>
+            )}
+
+            {selectedStudentId && loadingStudentData && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+                <CircularProgress sx={{ color: themeColors.primary }} />
+                <Typography sx={{ ml: 2, color: themeColors.textSecondary }}>Loading student dashboard...</Typography>
+              </Box>
+            )}
+
+            {!selectedStudentId && !loadingInitial && (
+              <Box sx={{ textAlign: 'center', mt: 4 }}>
+                <Typography variant="h6" sx={{ color: themeColors.textSecondary }}>
+                  Please select a student to view their dashboard.
+                </Typography>
+              </Box>
+            )}
+
+            {selectedStudentId && !loadingStudentData && !error && (
+              <>
+                <Grid container spacing={2.5}>
+                  <Grid item xs={12} md={6}>
+                    <UpcomingEventsMiniCalendar
+                      openAssignments={studentOpenAssignments}
+                      enrolledCourses={studentEnrolledCoursesDetails}
+                      loading={loadingStudentData || loadingInitial}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <EnrolledCoursesList
+                      courses={studentEnrolledCoursesDetails}
+                      loading={loadingStudentData || loadingInitial}
+                      navigateTo={selectedStudentId ? `/courses?studentId=${selectedStudentId}` : '/courses'}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <OpenAssignmentsList
+                      assignments={studentOpenAssignments}
+                      coursesMap={coursesMap}
+                      loading={loadingStudentData || loadingInitial}
+                      navigateTo={selectedStudentId ? `/assignments?studentId=${selectedStudentId}` : '/assignments'}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    {console.log('[Home.jsx] Preparing RecentGradesSummary. Selected Student ID:', selectedStudentId)}
+                    <RecentGradesSummary
+                      submissions={studentRecentSubmissions}
+                      assignmentsMap={assignmentsMap}
+                      coursesMap={coursesMap}
+                      loading={loadingStudentData || loadingInitial}
+                      navigateTo={selectedStudentId ? `/grades?studentId=${selectedStudentId}` : '/grades'}
+                      _debug_navigateTo_prop_for_grades={selectedStudentId ? `/grades?studentId=${selectedStudentId}` : '/grades'}
+                    />
+                  </Grid>
                 </Grid>
-                <Grid item xs={12} md={6}>
-                  <EnrolledCoursesList
-                    courses={studentEnrolledCoursesDetails}
-                    loading={loadingStudentData || loadingInitial}
-                    navigateTo={selectedStudentId ? `/courses?studentId=${selectedStudentId}` : '/courses'}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <OpenAssignmentsList
-                    assignments={studentOpenAssignments}
-                    coursesMap={coursesMap}
-                    loading={loadingStudentData || loadingInitial}
-                    navigateTo={selectedStudentId ? `/assignments?studentId=${selectedStudentId}` : '/assignments'}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-              {console.log('[Home.jsx] Preparing RecentGradesSummary. Selected Student ID:', selectedStudentId)}
-                  <RecentGradesSummary
-                    submissions={studentRecentSubmissions}
-                    assignmentsMap={assignmentsMap}
-                    coursesMap={coursesMap}
-                    loading={loadingStudentData || loadingInitial}
-                    navigateTo={selectedStudentId ? `/grades?studentId=${selectedStudentId}` : '/grades'}
-                // Log the actual path being passed
-                _debug_navigateTo_prop_for_grades={selectedStudentId ? `/grades?studentId=${selectedStudentId}` : '/grades'}
-                  />
-                </Grid>
-              </Grid>
-              <StudentStatistics stats={studentStats} loading={loadingStudentData || loadingInitial} />
-            </>
-          )}
+                <StudentStatistics stats={studentStats} loading={loadingStudentData || loadingInitial} />
+              </>
+            )}
+          </Paper>
         </Container>
       </Box>
     </>
