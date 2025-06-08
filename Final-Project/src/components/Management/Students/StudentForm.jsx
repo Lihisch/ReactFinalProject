@@ -15,7 +15,7 @@ import {
   Link,
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
-import { addStudent } from '../firebase/students';
+import { addStudent } from '../../../firebase/students';
 
 // Consistent color palette
 const colors = {
@@ -129,8 +129,6 @@ export default function StudentForm() {
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
-
-      {/* --- BREADCRUMBS START --- */}
       <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
         <Link component={RouterLink} underline="hover" sx={{ display: 'flex', alignItems: 'center' }} color="inherit" to="/">
           <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" /> Home
@@ -140,8 +138,6 @@ export default function StudentForm() {
         </Link>
         <Typography color="text.primary">Add New Student</Typography>
       </Breadcrumbs>
-      {/* --- BREADCRUMBS END --- */}
-
       <Box
         component="form"
         onSubmit={handleSubmit}

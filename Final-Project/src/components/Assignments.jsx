@@ -318,14 +318,14 @@ export default function Assignments() {
   return (
     <Box sx={{ backgroundColor: themeColors.background, minHeight: 'calc(100vh - 64px)', py: 4 }}>
       <Container maxWidth={false} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Box sx={{ width: '100%', maxWidth: 1300, mb: 2, alignSelf: 'flex-start' }}>
-          <Breadcrumbs aria-label="breadcrumb">
+        <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto', px: { xs: 1, sm: 3, md: 4 } }}>
+          <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
             <MuiLink
               component={RouterLink}
               underline="hover"
               sx={{ display: 'flex', alignItems: 'center' }}
               color="inherit"
-              to={selectedStudent ? `/?studentId=${selectedStudent}` : "/"} // Pass studentId if selected
+              to={selectedStudent ? `/?studentId=${selectedStudent}` : "/"}
             >
               <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
               Home
@@ -334,278 +334,276 @@ export default function Assignments() {
               Assignments
             </Typography>
           </Breadcrumbs>
-        </Box>
-        <Box sx={{ width: '100%', maxWidth: 1300, display: 'flex', alignItems: 'center', mb: 1, justifyContent: 'space-between' }}>
-          <Box>
-            <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: themeColors.primaryDark, mb: 0.2, letterSpacing: '.02em', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <AssignmentTurnedInIcon fontSize="medium" sx={{ color: themeColors.primaryDark, mb: '-4px' }} />
-              My Assignments
-            </Typography>
-            <Typography variant="subtitle1" sx={{ color: themeColors.textSecondary, fontWeight: 400, fontSize: '0.98rem' }}>
-              View and track your assignments by course and semester
-            </Typography>
+          <Box sx={{ width: '100%', maxWidth: 1300, display: 'flex', alignItems: 'center', mb: 1, justifyContent: 'space-between' }}>
+            <Box>
+              <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: themeColors.primaryDark, mb: 0.2, letterSpacing: '.02em', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AssignmentTurnedInIcon fontSize="medium" sx={{ color: themeColors.primaryDark, mb: '-4px' }} />
+                My Assignments
+              </Typography>
+              <Typography variant="subtitle1" sx={{ color: themeColors.textSecondary, fontWeight: 400, fontSize: '0.98rem' }}>
+                View and track your assignments by course and semester
+              </Typography>
+            </Box>
+            <FormControlLabel
+              control={<Switch checked={showCompleted} onChange={() => setShowCompleted(v => !v)} color="primary" />}
+              label="View Overdue Assignments"
+              sx={{ ml: 2, mr: 1, mt: 1 }}
+            />
           </Box>
-          <FormControlLabel
-            control={<Switch checked={showCompleted} onChange={() => setShowCompleted(v => !v)} color="primary" />}
-            label="View Overdue Assignments"
-            sx={{ ml: 2, mr: 1, mt: 1 }}
-          />
-        </Box>
-        <Paper elevation={3} sx={{
-          p: { xs: 2.5, sm: 4 },
-          borderRadius: 3,
-          backgroundColor: themeColors.paper,
-          boxShadow: '0 2px 16px #e0e0e0',
-          minHeight: 400,
-          maxWidth: 1300,
-          width: '100%',
-          mx: 'auto',
-        }}>
-          <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: themeColors.paper, borderRadius: 2, boxShadow: 'none' }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', color: themeColors.textPrimary }}>
-              Student Assignments
-            </Typography>
-            <FormControl fullWidth size="small">
-              <InputLabel id="student-select-label">Select Student</InputLabel>
-              <Select
-                labelId="student-select-label"
-                id="student-select"
-                value={selectedStudent}
-                label="Select Student"
-                onChange={handleStudentChange}
-                sx={{ bgcolor: themeColors.paper }}
-              >
-                <MenuItem value="">
-                  <em>None</em>
-                </MenuItem>
-                {students.map((student) => (
-                  <MenuItem key={student.studentId} value={student.studentId}>
-                    {student.lastName} - {student.firstName} ({student.studentId})
+          <Paper elevation={3} sx={{
+            p: { xs: 2.5, sm: 4 },
+            borderRadius: 3,
+            backgroundColor: themeColors.paper,
+            boxShadow: '0 2px 16px #e0e0e0',
+            minHeight: 400,
+            width: '100%',
+          }}>
+            <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: themeColors.paper, borderRadius: 2, boxShadow: 'none' }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', color: themeColors.textPrimary }}>
+                Student Assignments
+              </Typography>
+              <FormControl fullWidth size="small">
+                <InputLabel id="student-select-label">Select Student</InputLabel>
+                <Select
+                  labelId="student-select-label"
+                  id="student-select"
+                  value={selectedStudent}
+                  label="Select Student"
+                  onChange={handleStudentChange}
+                  sx={{ bgcolor: themeColors.paper }}
+                >
+                  <MenuItem value="">
+                    <em>None</em>
                   </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Paper>
-          {loading ? (
-            <Box sx={{ textAlign: 'center', py: 6 }}>
-              <Typography variant="h6" color="textSecondary">Loading assignments...</Typography>
-            </Box>
-          ) : !selectedStudent ? (
-            <Paper elevation={3} sx={{ p: 3, textAlign: 'center', borderRadius: 2, backgroundColor: themeColors.paper }}>
-              <Typography variant="h6" sx={{ color: themeColors.textSecondary }}>
-                Please select a student to view their assignments.
-              </Typography>
+                  {students.map((student) => (
+                    <MenuItem key={student.studentId} value={student.studentId}>
+                      {student.lastName} - {student.firstName} ({student.studentId})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Paper>
-          ) : Object.keys(grouped).length === 0 ? (
-            <Box sx={{ textAlign: 'center', mt: 4 }}>
-              <Typography variant="h6" color="textSecondary">
-                No assignments found for the selected student.
-              </Typography>
-            </Box>
-          ) : (
-            Object.entries(grouped)
-              .sort(([a], [b]) => getSemesterIndex(a) - getSemesterIndex(b))
-              .map(([semester, coursesObj], idx) => (
-                <Accordion key={semester} defaultExpanded={idx === 0} sx={{ mb: 2, backgroundColor: themeColors.paper, borderRadius: 2, boxShadow: 'none', border: `1px solid ${themeColors.secondary}` }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 56 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      <Typography variant="h5" component="h2" sx={{
-                        color: themeColors.primaryDark,
-                        fontWeight: 'bold',
-                        letterSpacing: '.03em',
-                        fontSize: '1.05rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                      }}>
-                        <span style={{ fontWeight: 700, textTransform: 'capitalize', marginRight: 4 }}>{semester}</span>
-                        <span style={{ fontWeight: 400 }}>Semester</span>
-                      </Typography>
-                      <Chip
-                        label={`${Object.keys(coursesObj).length} Courses`}
-                        sx={{ ml: 2, backgroundColor: themeColors.primary, color: '#222', fontWeight: 600, letterSpacing: '.01em', boxShadow: '0 1px 4px #e0e0e0' }}
-                        size="small"
-                      />
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    {Object.entries(coursesObj).map(([courseName, { course, assignments }]) => (
-                      <Box key={courseName} sx={{ mb: 2 }}>
-                        <Typography variant="subtitle2" sx={{ color: themeColors.primaryDark, fontWeight: 600, mb: 0.5, fontSize: '0.98rem', letterSpacing: '.01em' }}>
-                          {courseName}
+            {loading ? (
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <Typography variant="h6" color="textSecondary">Loading assignments...</Typography>
+              </Box>
+            ) : !selectedStudent ? (
+              <Paper elevation={3} sx={{ p: 3, textAlign: 'center', borderRadius: 2, backgroundColor: themeColors.paper }}>
+                <Typography variant="h6" sx={{ color: themeColors.textSecondary }}>
+                  Please select a student to view their assignments.
+                </Typography>
+              </Paper>
+            ) : Object.keys(grouped).length === 0 ? (
+              <Box sx={{ textAlign: 'center', mt: 4 }}>
+                <Typography variant="h6" color="textSecondary">
+                  No assignments found for the selected student.
+                </Typography>
+              </Box>
+            ) : (
+              Object.entries(grouped)
+                .sort(([a], [b]) => getSemesterIndex(a) - getSemesterIndex(b))
+                .map(([semester, coursesObj], idx) => (
+                  <Accordion key={semester} defaultExpanded={idx === 0} sx={{ mb: 2, backgroundColor: themeColors.paper, borderRadius: 2, boxShadow: 'none', border: `1px solid ${themeColors.secondary}` }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 56 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        <Typography variant="h5" component="h2" sx={{
+                          color: themeColors.primaryDark,
+                          fontWeight: 'bold',
+                          letterSpacing: '.03em',
+                          fontSize: '1.05rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}>
+                          <span style={{ fontWeight: 700, textTransform: 'capitalize', marginRight: 4 }}>{semester}</span>
+                          <span style={{ fontWeight: 400 }}>Semester</span>
                         </Typography>
-                        <Grid container spacing={1.5} alignItems="stretch">
-                          {['Active', 'Past Due', 'Unknown', 'Invalid Date'].flatMap(status =>
-                            assignments[status].map(assignment => {
-                              const isActive = getAssignmentStatus(assignment.dueDate) === 'Active';
-                              const isSubmitted = checkIsSubmitted(assignment);
-                              const isGroup = assignment.assignmentType === 'Group';
-                              // Card visual style for non-active
-                              const faded = !isActive && !isSubmitted;
-                              return (
-                                <Grid item xs={12} sm={6} md={4} lg={3} sx={{ display: 'flex', flex: '1 1 0' }} key={assignment.assignmentId}>
-                                  <Card
-                                    elevation={2}
-                                    sx={{
-                                      borderRadius: 1.5,
-                                      backgroundColor: faded ? '#f7f7f7' : themeColors.paper,
-                                      boxShadow: faded ? '0 1px 3px rgba(34,34,34,0.04)' : '0 1px 6px rgba(34, 34, 34, 0.06)',
-                                      border: faded ? `1.5px dashed #ccc` : `1px solid ${themeColors.secondary}`,
-                                      opacity: faded ? 0.7 : 1,
-                                      transition: 'transform 0.18s, box-shadow 0.18s',
-                                      m: 0,
-                                      p: 0.5,
-                                      '&:hover': faded ? {} : {
-                                        transform: 'translateY(-2px) scale(1.01)',
-                                        boxShadow: '0 3px 12px rgba(34, 34, 34, 0.11)',
-                                        borderColor: themeColors.primaryDark,
-                                      },
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      height: '100%',
-                                      cursor: 'pointer',
-                                    }}
-                                    onClick={() => setDialogAssignment({
-                                      ...assignment,
-                                      submission: getSubmission(assignment),
-                                      status: getAssignmentStatus(assignment.dueDate),
-                                      courseName: course?.courseName || '',
-                                      professorsName: course?.professorsName || '',
-                                    })}
-                                  >
-                                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 }, flex: 1, minHeight: 220, display: 'flex', flexDirection: 'column' }}>
-                                      <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Chip
-                                          label={getAssignmentStatus(assignment.dueDate)}
-                                          color={
-                                            getAssignmentStatus(assignment.dueDate) === 'Active'
-                                              ? 'success'
-                                              : getAssignmentStatus(assignment.dueDate) === 'Past Due'
-                                              ? 'error'
-                                              : 'default'
-                                          }
-                                          size="small"
-                                          sx={{
-                                            fontWeight: 500,
-                                            fontSize: '0.87rem',
-                                            backgroundColor:
-                                              getAssignmentStatus(assignment.dueDate) === 'Active'
-                                                ? '#eaf5d3'
-                                                : getAssignmentStatus(assignment.dueDate) === 'Past Due'
-                                                ? '#fbeaea'
-                                                : '#f3f3f3',
-                                            color:
-                                              getAssignmentStatus(assignment.dueDate) === 'Active'
-                                                ? themeColors.primaryDark
-                                                : getAssignmentStatus(assignment.dueDate) === 'Past Due'
-                                                ? '#b71c1c'
-                                                : '#888',
-                                            px: 1,
-                                            py: 0.1,
-                                            borderRadius: 1.5,
-                                            boxShadow: 'none',
-                                            border: 'none',
-                                          }}
-                                        />
-                                      </Box>
-                                      <Typography variant="subtitle2" component="h3" gutterBottom sx={{
-                                        color: themeColors.primaryDark,
-                                        fontWeight: 600,
-                                        fontSize: '0.98rem',
-                                        mb: 0.7,
-                                        letterSpacing: '.01em',
-                                        textShadow: '0 1px 0 #e0e0e0',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 0.5,
-                                      }}>
-                                        <AssignmentTurnedInIcon sx={{ mr: 0.5, color: themeColors.primaryDark, verticalAlign: 'middle', fontSize: '1.1rem' }} fontSize="small" />
-                                        {assignment.assignmentName}
-                                      </Typography>
-                                      <Box sx={{ mt: 0.5, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                                          <PersonIcon sx={{ mr: 0.5, color: themeColors.primary, fontSize: '1.1rem' }} />
-                                          <Typography variant="body2" sx={{ color: '#222', fontWeight: 500, fontSize: '0.92rem' }}>
-                                            {course?.professorsName || 'N/A'}
-                                          </Typography>
-                                        </Box>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                                          <AccessTimeIcon sx={{ mr: 0.5, color: themeColors.primary, fontSize: '1.1rem' }} />
-                                          <Typography variant="body2" sx={{ color: '#444', fontSize: '0.92rem' }}>
-                                            Due: {formatDate(assignment.dueDate)}
-                                          </Typography>
-                                        </Box>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                                          <StarIcon sx={{ mr: 0.5, color: themeColors.primary, fontSize: '1.1rem' }} />
-                                          <Typography variant="body2" sx={{ color: '#444', fontSize: '0.92rem' }}>
-                                            Weight: {assignment.weight}%
-                                          </Typography>
-                                        </Box>
-                                        <Typography variant="body2" paragraph sx={{ mt: 0.5, color: '#333', fontWeight: 400, lineHeight: 1.4, fontSize: '0.93rem', mb: 0, flex: 1 }}>
-                                          {assignment.description}
-                                        </Typography>
-                                      </Box>
-                                      {isActive && !isSubmitted ? (
-                                        <Button
-                                          variant="contained"
-                                          size="small"
-                                          sx={{
-                                            mt: 1,
-                                            alignSelf: 'flex-end',
-                                            fontWeight: 600,
-                                            borderRadius: 2,
-                                            textTransform: 'none',
-                                            backgroundColor: themeColors.primaryDark,
-                                            color: '#fff',
-                                            minWidth: 100,
-                                            fontSize: '0.91rem',
-                                            py: 0.3,
-                                            boxShadow: 'none',
-                                            '&:hover': { backgroundColor: themeColors.primary },
-                                          }}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleOpenSubmitDialog(assignment);
-                                          }}
-                                        >
-                                          Submit Assignment
-                                        </Button>
-                                      ) : (
-                                        <Button
-                                          variant="contained"
-                                          size="small"
-                                          disabled
-                                          sx={{
-                                            mt: 1,
-                                            alignSelf: 'flex-end',
-                                            fontWeight: 600,
-                                            borderRadius: 2,
-                                            textTransform: 'none',
-                                            backgroundColor: '#e0e0e0',
-                                            color: '#888',
-                                            minWidth: 100,
-                                            fontSize: '0.91rem',
-                                            py: 0.3,
-                                            boxShadow: 'none',
-                                          }}
-                                        >
-                                          {isSubmitted ? 'Already Submitted' : 'Not Available'}
-                                        </Button>
-                                      )}
-                                    </CardContent>
-                                  </Card>
-                                </Grid>
-                              );
-                            })
-                          )}
-                        </Grid>
+                        <Chip
+                          label={`${Object.keys(coursesObj).length} Courses`}
+                          sx={{ ml: 2, backgroundColor: themeColors.primary, color: '#222', fontWeight: 600, letterSpacing: '.01em', boxShadow: '0 1px 4px #e0e0e0' }}
+                          size="small"
+                        />
                       </Box>
-                    ))}
-                  </AccordionDetails>
-                </Accordion>
-              ))
-          )}
-        </Paper>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      {Object.entries(coursesObj).map(([courseName, { course, assignments }]) => (
+                        <Box key={courseName} sx={{ mb: 2 }}>
+                          <Typography variant="subtitle2" sx={{ color: themeColors.primaryDark, fontWeight: 600, mb: 0.5, fontSize: '0.98rem', letterSpacing: '.01em' }}>
+                            {courseName}
+                          </Typography>
+                          <Grid container spacing={1.5} alignItems="stretch">
+                            {['Active', 'Past Due', 'Unknown', 'Invalid Date'].flatMap(status =>
+                              assignments[status].map(assignment => {
+                                const isActive = getAssignmentStatus(assignment.dueDate) === 'Active';
+                                const isSubmitted = checkIsSubmitted(assignment);
+                                const isGroup = assignment.assignmentType === 'Group';
+                                // Card visual style for non-active
+                                const faded = !isActive && !isSubmitted;
+                                return (
+                                  <Grid item xs={12} sm={6} md={4} lg={3} sx={{ display: 'flex', flex: '1 1 0' }} key={assignment.assignmentId}>
+                                    <Card
+                                      elevation={2}
+                                      sx={{
+                                        borderRadius: 1.5,
+                                        backgroundColor: faded ? '#f7f7f7' : themeColors.paper,
+                                        boxShadow: faded ? '0 1px 3px rgba(34,34,34,0.04)' : '0 1px 6px rgba(34, 34, 34, 0.06)',
+                                        border: faded ? `1.5px dashed #ccc` : `1px solid ${themeColors.secondary}`,
+                                        opacity: faded ? 0.7 : 1,
+                                        transition: 'transform 0.18s, box-shadow 0.18s',
+                                        m: 0,
+                                        p: 0.5,
+                                        '&:hover': faded ? {} : {
+                                          transform: 'translateY(-2px) scale(1.01)',
+                                          boxShadow: '0 3px 12px rgba(34, 34, 34, 0.11)',
+                                          borderColor: themeColors.primaryDark,
+                                        },
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        height: '100%',
+                                        cursor: 'pointer',
+                                      }}
+                                      onClick={() => setDialogAssignment({
+                                        ...assignment,
+                                        submission: getSubmission(assignment),
+                                        status: getAssignmentStatus(assignment.dueDate),
+                                        courseName: course?.courseName || '',
+                                        professorsName: course?.professorsName || '',
+                                      })}
+                                    >
+                                      <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 }, flex: 1, minHeight: 220, display: 'flex', flexDirection: 'column' }}>
+                                        <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <Chip
+                                            label={getAssignmentStatus(assignment.dueDate)}
+                                            color={
+                                              getAssignmentStatus(assignment.dueDate) === 'Active'
+                                                ? 'success'
+                                                : getAssignmentStatus(assignment.dueDate) === 'Past Due'
+                                                ? 'error'
+                                                : 'default'
+                                            }
+                                            size="small"
+                                            sx={{
+                                              fontWeight: 500,
+                                              fontSize: '0.87rem',
+                                              backgroundColor:
+                                                getAssignmentStatus(assignment.dueDate) === 'Active'
+                                                  ? '#eaf5d3'
+                                                  : getAssignmentStatus(assignment.dueDate) === 'Past Due'
+                                                  ? '#fbeaea'
+                                                  : '#f3f3f3',
+                                              color:
+                                                getAssignmentStatus(assignment.dueDate) === 'Active'
+                                                  ? themeColors.primaryDark
+                                                  : getAssignmentStatus(assignment.dueDate) === 'Past Due'
+                                                  ? '#b71c1c'
+                                                  : '#888',
+                                              px: 1,
+                                              py: 0.1,
+                                              borderRadius: 1.5,
+                                              boxShadow: 'none',
+                                              border: 'none',
+                                            }}
+                                          />
+                                        </Box>
+                                        <Typography variant="subtitle2" component="h3" gutterBottom sx={{
+                                          color: themeColors.primaryDark,
+                                          fontWeight: 600,
+                                          fontSize: '0.98rem',
+                                          mb: 0.7,
+                                          letterSpacing: '.01em',
+                                          textShadow: '0 1px 0 #e0e0e0',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: 0.5,
+                                        }}>
+                                          <AssignmentTurnedInIcon sx={{ mr: 0.5, color: themeColors.primaryDark, verticalAlign: 'middle', fontSize: '1.1rem' }} fontSize="small" />
+                                          {assignment.assignmentName}
+                                        </Typography>
+                                        <Box sx={{ mt: 0.5, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                            <PersonIcon sx={{ mr: 0.5, color: themeColors.primary, fontSize: '1.1rem' }} />
+                                            <Typography variant="body2" sx={{ color: '#222', fontWeight: 500, fontSize: '0.92rem' }}>
+                                              {course?.professorsName || 'N/A'}
+                                            </Typography>
+                                          </Box>
+                                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                            <AccessTimeIcon sx={{ mr: 0.5, color: themeColors.primary, fontSize: '1.1rem' }} />
+                                            <Typography variant="body2" sx={{ color: '#444', fontSize: '0.92rem' }}>
+                                              Due: {formatDate(assignment.dueDate)}
+                                            </Typography>
+                                          </Box>
+                                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                            <StarIcon sx={{ mr: 0.5, color: themeColors.primary, fontSize: '1.1rem' }} />
+                                            <Typography variant="body2" sx={{ color: '#444', fontSize: '0.92rem' }}>
+                                              Weight: {assignment.weight}%
+                                            </Typography>
+                                          </Box>
+                                          <Typography variant="body2" paragraph sx={{ mt: 0.5, color: '#333', fontWeight: 400, lineHeight: 1.4, fontSize: '0.93rem', mb: 0, flex: 1 }}>
+                                            {assignment.description}
+                                          </Typography>
+                                        </Box>
+                                        {isActive && !isSubmitted ? (
+                                          <Button
+                                            variant="contained"
+                                            size="small"
+                                            sx={{
+                                              mt: 1,
+                                              alignSelf: 'flex-end',
+                                              fontWeight: 600,
+                                              borderRadius: 2,
+                                              textTransform: 'none',
+                                              backgroundColor: themeColors.primaryDark,
+                                              color: '#fff',
+                                              minWidth: 100,
+                                              fontSize: '0.91rem',
+                                              py: 0.3,
+                                              boxShadow: 'none',
+                                              '&:hover': { backgroundColor: themeColors.primary },
+                                            }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleOpenSubmitDialog(assignment);
+                                            }}
+                                          >
+                                            Submit Assignment
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            variant="contained"
+                                            size="small"
+                                            disabled
+                                            sx={{
+                                              mt: 1,
+                                              alignSelf: 'flex-end',
+                                              fontWeight: 600,
+                                              borderRadius: 2,
+                                              textTransform: 'none',
+                                              backgroundColor: '#e0e0e0',
+                                              color: '#888',
+                                              minWidth: 100,
+                                              fontSize: '0.91rem',
+                                              py: 0.3,
+                                              boxShadow: 'none',
+                                            }}
+                                          >
+                                            {isSubmitted ? 'Already Submitted' : 'Not Available'}
+                                          </Button>
+                                        )}
+                                      </CardContent>
+                                    </Card>
+                                  </Grid>
+                                );
+                              })
+                            )}
+                          </Grid>
+                        </Box>
+                      ))}
+                    </AccordionDetails>
+                  </Accordion>
+                ))
+            )}
+          </Paper>
+        </Box>
       </Container>
       <Dialog open={openSubmitDialog} onClose={handleCloseSubmitDialog} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 700, fontSize: '1.25rem', color: themeColors.primaryDark, pb: 0 }}>

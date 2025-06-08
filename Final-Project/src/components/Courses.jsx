@@ -248,14 +248,14 @@ const Courses = () => {
   return (
     <Box sx={{ backgroundColor: themeColors.background, minHeight: 'calc(100vh - 64px)', py: 4 }}>
       <Container maxWidth={false} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Box sx={{ width: '100%', maxWidth: 1300, mb: 2, alignSelf: 'flex-start' }}>
-          <Breadcrumbs aria-label="breadcrumb">
+        <Box sx={{ width: '100%', maxWidth: 1100, mx: 'auto', px: { xs: 1, sm: 3, md: 4 } }}>
+          <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
             <MuiLink
               component={RouterLink}
               underline="hover"
               sx={{ display: 'flex', alignItems: 'center' }}
               color="inherit"
-              to={selectedStudent ? `/?studentId=${selectedStudent}` : "/"} // Pass studentId if selected
+              to={selectedStudent ? `/?studentId=${selectedStudent}` : "/"}
             >
               <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
               Home
@@ -264,171 +264,170 @@ const Courses = () => {
               Courses
             </Typography>
           </Breadcrumbs>
-        </Box>
-        <Box sx={{ width: '100%', maxWidth: 1300, mb: 1.5 }}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: themeColors.primaryDark, mb: 0.2, letterSpacing: '.02em', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <SchoolIcon fontSize="medium" sx={{ color: themeColors.primaryDark, mb: '-4px' }} />
-            My Courses
-          </Typography>
-          <Typography variant="subtitle1" sx={{ color: themeColors.textSecondary, fontWeight: 400, fontSize: '0.98rem' }}>
-            View and manage the courses you are enrolled in
-          </Typography>
-        </Box>
-        <Paper elevation={3} sx={{
-          p: { xs: 2.5, sm: 4 },
-          borderRadius: 3,
-          backgroundColor: themeColors.paper,
-          boxShadow: '0 2px 16px #e0e0e0',
-          minHeight: 400,
-          maxWidth: 1300,
-          width: '100%',
-          mx: 'auto',
-        }}>
-          <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: themeColors.paper, borderRadius: 2, boxShadow: 'none' }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', color: themeColors.textPrimary }}>
-              Student Courses
+          <Paper
+            elevation={3}
+            sx={{
+              p: { xs: 3, sm: 5, md: 6 },
+              borderRadius: 3,
+              backgroundColor: themeColors.paper,
+              boxShadow: '0 2px 16px #e0e0e0',
+              minHeight: 400,
+              width: '100%',
+            }}
+          >
+            <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: themeColors.primaryDark, mb: 0.2, letterSpacing: '.02em', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: 1 }}>
+              <SchoolIcon fontSize="medium" sx={{ color: themeColors.primaryDark, mb: '-4px' }} />
+              My Courses
             </Typography>
-            <FormControl fullWidth size="small">
-              <InputLabel id="student-select-label">Select Student</InputLabel>
-              <Select
-                labelId="student-select-label"
-                id="student-select"
-                value={selectedStudent}
-                label="Select Student"
-                onChange={handleStudentChange}
-                sx={{ bgcolor: themeColors.paper }}
-              >
-                <MenuItem value="">
-                  <em>None</em>
-                </MenuItem>
-                {students.map((student) => (
-                  <MenuItem key={student.studentId} value={student.studentId}>
-                    {student.lastName} - {student.firstName} ({student.studentId})
+            <Typography variant="subtitle1" sx={{ color: themeColors.textSecondary, fontWeight: 400, fontSize: '0.98rem' }}>
+              View your enrolled courses by semester
+            </Typography>
+            <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: themeColors.paper, borderRadius: 2, boxShadow: 'none' }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', color: themeColors.textPrimary }}>
+                Student Courses
+              </Typography>
+              <FormControl fullWidth size="small">
+                <InputLabel id="student-select-label">Select Student</InputLabel>
+                <Select
+                  labelId="student-select-label"
+                  id="student-select"
+                  value={selectedStudent}
+                  label="Select Student"
+                  onChange={handleStudentChange}
+                  sx={{ bgcolor: themeColors.paper }}
+                >
+                  <MenuItem value="">
+                    <em>None</em>
                   </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            {selectedStudent && (
-              <Button
-                variant="contained"
-                sx={{ mt: 2, backgroundColor: themeColors.primaryDark, color: '#fff', fontWeight: 600, borderRadius: 2, textTransform: 'none', boxShadow: 'none', '&:hover': { backgroundColor: themeColors.primary } }}
-                onClick={handleOpenRegisterDialog}
-              >
-                Register to a Course
-              </Button>
+                  {students.map((student) => (
+                    <MenuItem key={student.studentId} value={student.studentId}>
+                      {student.lastName} - {student.firstName} ({student.studentId})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              {selectedStudent && (
+                <Button
+                  variant="contained"
+                  sx={{ mt: 2, backgroundColor: themeColors.primaryDark, color: '#fff', fontWeight: 600, borderRadius: 2, textTransform: 'none', boxShadow: 'none', '&:hover': { backgroundColor: themeColors.primary } }}
+                  onClick={handleOpenRegisterDialog}
+                >
+                  Register to a Course
+                </Button>
+              )}
+            </Paper>
+
+            {loading ? (
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <Typography variant="h6" color="textSecondary">Loading courses...</Typography>
+              </Box>
+            ) : Object.keys(coursesBySemester).length === 0 ? (
+              <Box sx={{ textAlign: 'center', mt: 4 }}>
+                <Typography variant="h6" color="textSecondary">
+                  No courses found for the selected student.
+                </Typography>
+              </Box>
+            ) : (
+              Object.entries(coursesBySemester)
+                .sort(([a], [b]) => getSemesterIndex(a) - getSemesterIndex(b))
+                .map(([semester, semesterCourses], idx) => (
+                  <Accordion key={semester} defaultExpanded={idx === 0} sx={{ mb: 2, backgroundColor: themeColors.paper, borderRadius: 2, boxShadow: 'none', border: `1px solid ${themeColors.secondary}` }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 56 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        <Typography variant="h5" component="h2" sx={{
+                          color: themeColors.primaryDark,
+                          fontWeight: 'bold',
+                          letterSpacing: '.03em',
+                          fontSize: '1.05rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}>
+                          <span style={{ fontWeight: 700, textTransform: 'capitalize', marginRight: 4 }}>{semester}</span>
+                          <span style={{ fontWeight: 400 }}>Semester</span>
+                        </Typography>
+                        <Chip
+                          label={`${semesterCourses.length} Courses`}
+                          sx={{ ml: 2, backgroundColor: themeColors.primary, color: '#222', fontWeight: 600, letterSpacing: '.01em', boxShadow: '0 1px 4px #e0e0e0' }}
+                          size="small"
+                        />
+                      </Box>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Grid container spacing={3}>
+                        {semesterCourses.map((course) => {
+                          const courseAssignments = getCourseAssignments(course.courseId);
+                          return (
+                            <Grid item xs={12} sm={6} md={4} key={course.courseId}>
+                              <Card
+                                elevation={3}
+                                sx={{
+                                  height: '100%',
+                                  borderRadius: 2,
+                                  backgroundColor: themeColors.paper,
+                                  boxShadow: '0 2px 12px rgba(34, 34, 34, 0.07)',
+                                  border: `1.5px solid ${themeColors.secondary}`,
+                                  transition: 'transform 0.2s, box-shadow 0.2s',
+                                  m: 0.5,
+                                  '&:hover': {
+                                    transform: 'translateY(-4px) scale(1.02)',
+                                    boxShadow: '0 6px 24px rgba(34, 34, 34, 0.13)',
+                                    borderColor: themeColors.primaryDark,
+                                  },
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => handleOpenCourseDialog(course)}
+                              >
+                                <CardContent>
+                                  <Typography variant="h6" component="h3" gutterBottom sx={{
+                                    color: themeColors.primaryDark,
+                                    fontWeight: 600,
+                                    fontSize: '1.05rem',
+                                    mb: 1.2,
+                                    letterSpacing: '.01em',
+                                    textShadow: '0 1px 0 #e0e0e0',
+                                  }}>
+                                    <SchoolIcon sx={{ mr: 1, color: themeColors.primaryDark, verticalAlign: 'middle' }} fontSize="small" />
+                                    {course.courseName}
+                                  </Typography>
+                                  <Box sx={{ mt: 2 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                      <PersonIcon sx={{ mr: 1, color: themeColors.primary }} />
+                                      <Typography variant="body2" sx={{ color: '#222', fontWeight: 500 }}>
+                                        {course.professorsName}
+                                      </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                      <AccessTimeIcon sx={{ mr: 1, color: themeColors.primary }} />
+                                      <Typography variant="body2" sx={{ color: '#444' }}>
+                                        {course.dayOfWeek}, {course.courseHours}
+                                      </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                      <StarIcon sx={{ mr: 1, color: themeColors.primary }} />
+                                      <Typography variant="body2" sx={{ color: '#444' }}>
+                                        {course.creditPoints} Credit Points
+                                      </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                      <CalendarTodayIcon sx={{ mr: 1, color: themeColors.primary }} />
+                                      <Typography variant="body2" sx={{ color: '#444' }}>
+                                        Starting: {course.startingDate}
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                </CardContent>
+                              </Card>
+                            </Grid>
+                          );
+                        })}
+                      </Grid>
+                    </AccordionDetails>
+                  </Accordion>
+                ))
             )}
           </Paper>
-
-          {loading ? (
-            <Box sx={{ textAlign: 'center', py: 6 }}>
-              <Typography variant="h6" color="textSecondary">Loading courses...</Typography>
-            </Box>
-          ) : Object.keys(coursesBySemester).length === 0 ? (
-            <Box sx={{ textAlign: 'center', mt: 4 }}>
-              <Typography variant="h6" color="textSecondary">
-                No courses found for the selected student.
-              </Typography>
-            </Box>
-          ) : (
-            Object.entries(coursesBySemester)
-              .sort(([a], [b]) => getSemesterIndex(a) - getSemesterIndex(b))
-              .map(([semester, semesterCourses], idx) => (
-                <Accordion key={semester} defaultExpanded={idx === 0} sx={{ mb: 2, backgroundColor: themeColors.paper, borderRadius: 2, boxShadow: 'none', border: `1px solid ${themeColors.secondary}` }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 56 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      <Typography variant="h5" component="h2" sx={{
-                        color: themeColors.primaryDark,
-                        fontWeight: 'bold',
-                        letterSpacing: '.03em',
-                        fontSize: '1.05rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                      }}>
-                        <span style={{ fontWeight: 700, textTransform: 'capitalize', marginRight: 4 }}>{semester}</span>
-                        <span style={{ fontWeight: 400 }}>Semester</span>
-                      </Typography>
-                      <Chip
-                        label={`${semesterCourses.length} Courses`}
-                        sx={{ ml: 2, backgroundColor: themeColors.primary, color: '#222', fontWeight: 600, letterSpacing: '.01em', boxShadow: '0 1px 4px #e0e0e0' }}
-                        size="small"
-                      />
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Grid container spacing={3}>
-                      {semesterCourses.map((course) => {
-                        const courseAssignments = getCourseAssignments(course.courseId);
-                        return (
-                          <Grid item xs={12} sm={6} md={4} key={course.courseId}>
-                            <Card
-                              elevation={3}
-                              sx={{
-                                height: '100%',
-                                borderRadius: 2,
-                                backgroundColor: themeColors.paper,
-                                boxShadow: '0 2px 12px rgba(34, 34, 34, 0.07)',
-                                border: `1.5px solid ${themeColors.secondary}`,
-                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                m: 0.5,
-                                '&:hover': {
-                                  transform: 'translateY(-4px) scale(1.02)',
-                                  boxShadow: '0 6px 24px rgba(34, 34, 34, 0.13)',
-                                  borderColor: themeColors.primaryDark,
-                                },
-                                cursor: 'pointer',
-                              }}
-                              onClick={() => handleOpenCourseDialog(course)}
-                            >
-                              <CardContent>
-                                <Typography variant="h6" component="h3" gutterBottom sx={{
-                                  color: themeColors.primaryDark,
-                                  fontWeight: 600,
-                                  fontSize: '1.05rem',
-                                  mb: 1.2,
-                                  letterSpacing: '.01em',
-                                  textShadow: '0 1px 0 #e0e0e0',
-                                }}>
-                                  <SchoolIcon sx={{ mr: 1, color: themeColors.primaryDark, verticalAlign: 'middle' }} fontSize="small" />
-                                  {course.courseName}
-                                </Typography>
-                                <Box sx={{ mt: 2 }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                    <PersonIcon sx={{ mr: 1, color: themeColors.primary }} />
-                                    <Typography variant="body2" sx={{ color: '#222', fontWeight: 500 }}>
-                                      {course.professorsName}
-                                    </Typography>
-                                  </Box>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                    <AccessTimeIcon sx={{ mr: 1, color: themeColors.primary }} />
-                                    <Typography variant="body2" sx={{ color: '#444' }}>
-                                      {course.dayOfWeek}, {course.courseHours}
-                                    </Typography>
-                                  </Box>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                    <StarIcon sx={{ mr: 1, color: themeColors.primary }} />
-                                    <Typography variant="body2" sx={{ color: '#444' }}>
-                                      {course.creditPoints} Credit Points
-                                    </Typography>
-                                  </Box>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                    <CalendarTodayIcon sx={{ mr: 1, color: themeColors.primary }} />
-                                    <Typography variant="body2" sx={{ color: '#444' }}>
-                                      Starting: {course.startingDate}
-                                    </Typography>
-                                  </Box>
-                                </Box>
-                              </CardContent>
-                            </Card>
-                          </Grid>
-                        );
-                      })}
-                    </Grid>
-                  </AccordionDetails>
-                </Accordion>
-              ))
-          )}
-        </Paper>
+        </Box>
       </Container>
 
       <Dialog

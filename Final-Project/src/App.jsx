@@ -1,22 +1,25 @@
 // src/App.jsx
 import React, { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import Header from './components/Header';
 import Home from './components/Home';
 import Help from './components/Help';
-import Info from './components/Info';
+import Info from './components/StudentAnalytics/Info';
 import Grades from './components/Grades';
 import Courses from './components/Courses';
 import Assignments from './components/Assignments';
-import CoursesManagement from './components/CoursesManagement';
-import CourseForm from './components/CourseForm';
-import StudentsManagement from './components/StudentsManagement';
-import StudentForm from './components/StudentForm';
-import EnrollmentForm from './components/EnrollmentForm';
-import GradesManagement from './components/GradesManagement';
-import GradesForm from './components/GradesForm';
-import AssignmentsManagement from './components/AssignmentsManagement';
-import AssignmentsForm from './components/AssignmentsForm';
+import CoursesManagement from './components/Management/Courses/CoursesManagement';
+import CourseForm from './components/Management/Courses/CourseForm';
+import StudentsManagement from './components/Management/Students/StudentsManagement';
+import StudentForm from './components/Management/Students/StudentForm';
+import EnrollmentForm from './components/Management/Students/EnrollmentForm';
+import GradesManagement from './components/Management/Grades/GradesManagement';
+import GradesForm from './components/Management/Grades/GradesForm';
+import AssignmentsManagement from './components/Management/Assignments/AssignmentsManagement';
+import AssignmentsForm from './components/Management/Assignments/AssignmentsForm';
+import CourseAnalytics from './components/CourseAnalytics/CourseAnalytics';
 
 import './App.css';
 
@@ -83,31 +86,34 @@ function App() {
   };
 
   return (
-    <div className="container">
-      <Header />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/help" element={<Help />} />
-        <Route path="/info" element={<Info />} />
-        <Route path="/grades" element={<Grades />} />
-        <Route path="/courses" element={<Courses />} />
-        <Route path="/assignments" element={<Assignments />} />
-        <Route path="/coursesmanagement" element={<CoursesManagement />} />
-        <Route path="/courseform" element={<CourseForm />} />
-        <Route path="/courseform/:courseId" element={<CourseForm />} />
-        <Route path="/studentsmanagement" element={<StudentsManagement />} />
-        <Route path="/studentform" element={<StudentForm />} />
-        <Route path="/studentform/:studentId" element={<StudentForm />} />
-        <Route path="/enrollmentform" element={<EnrollmentForm />} />
-        <Route path="/gradesmanagement" element={<GradesManagement />} />
-        <Route path="/gradesmanagement/:courseId/:studentId" element={<GradesManagement />} />
-        <Route path="/gradesform" element={<GradesForm />} />
-        <Route path="/assignmentsmanagement" element={<AssignmentsManagement />} />
-        <Route path="/assignmentsform" element={<AssignmentsForm />} />
-        <Route path="/assignmentsform/:assignmentId" element={<AssignmentsForm />} />
-        <Route path="/assignmentsform/copy/:assignmentId" element={<AssignmentsForm />} />
-      </Routes>
-    </div>
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <div className="container">
+        <Header />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/info" element={<Info />} />
+          <Route path="/course-analytics" element={<CourseAnalytics />} />
+          <Route path="/grades" element={<Grades />} />
+          <Route path="/courses" element={<Courses />} />
+          <Route path="/assignments" element={<Assignments />} />
+          <Route path="/coursesmanagement" element={<CoursesManagement />} />
+          <Route path="/courseform" element={<CourseForm />} />
+          <Route path="/courseform/:courseId" element={<CourseForm />} />
+          <Route path="/studentsmanagement" element={<StudentsManagement />} />
+          <Route path="/studentform" element={<StudentForm />} />
+          <Route path="/studentform/:studentId" element={<StudentForm />} />
+          <Route path="/enrollmentform" element={<EnrollmentForm />} />
+          <Route path="/gradesmanagement" element={<GradesManagement />} />
+          <Route path="/gradesmanagement/:courseId/:studentId" element={<GradesManagement />} />
+          <Route path="/gradesform" element={<GradesForm />} />
+          <Route path="/assignmentsmanagement" element={<AssignmentsManagement />} />
+          <Route path="/assignmentsform" element={<AssignmentsForm />} />
+          <Route path="/assignmentsform/:assignmentId" element={<AssignmentsForm />} />
+          <Route path="/assignmentsform/copy/:assignmentId" element={<AssignmentsForm />} />
+        </Routes>
+      </div>
+    </LocalizationProvider>
   );
 }
 

@@ -1,4 +1,3 @@
-// src/components/AssignmentsForm.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link as RouterLink, useParams } from 'react-router-dom';
 import {
@@ -10,8 +9,8 @@ import HomeIcon from '@mui/icons-material/Home';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
-import { addAssignment, updateAssignment, listAssignments } from '../firebase/assignments';
-import { listCourses } from '../firebase/courses';
+import { addAssignment, updateAssignment, listAssignments } from '../../../firebase/assignments';
+import { listCourses } from '../../../firebase/courses';
 
 const colors = {
   green: '#bed630',
@@ -20,7 +19,7 @@ const colors = {
   white: '#ffffff'
 };
 
-export default function AssignmentForm() {
+export default function AssignmentsForm() {
   const navigate = useNavigate();
   const { assignmentId } = useParams();
   

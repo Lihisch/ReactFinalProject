@@ -206,14 +206,14 @@ export default function Grades() {
   return (
     <Box sx={{ backgroundColor: themeColors.background, minHeight: 'calc(100vh - 64px)', py: 4 }}>
       <Container maxWidth={false} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Box sx={{ width: '100%', maxWidth: 1300, mb: 2, alignSelf: 'flex-start' /* Ensure breadcrumbs align left with container */ }}>
-          <Breadcrumbs aria-label="breadcrumb">
+        <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto', px: { xs: 1, sm: 3, md: 4 } }}>
+          <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
             <MuiLink
               component={RouterLink}
               underline="hover"
               sx={{ display: 'flex', alignItems: 'center' }}
               color="inherit"
-              to={selectedStudent ? `/?studentId=${selectedStudent}` : "/"} // Pass studentId if selected
+              to={selectedStudent ? `/?studentId=${selectedStudent}` : "/"}
             >
               <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
               Home
@@ -222,234 +222,232 @@ export default function Grades() {
               Grades
             </Typography>
           </Breadcrumbs>
-        </Box>
-        <Box sx={{ width: '100%', maxWidth: 1300, mb: 1.5 }}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: themeColors.primaryDark, mb: 0.2, letterSpacing: '.02em', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <GradeIcon fontSize="medium" sx={{ color: themeColors.primaryDark, mb: '-4px' }} />
-            My Grades
-          </Typography>
-          <Typography variant="subtitle1" sx={{ color: themeColors.textSecondary, fontWeight: 400, fontSize: '0.98rem' }}>
-            View your grades by course and semester
-          </Typography>
-        </Box>
-        <Paper elevation={3} sx={{
-          p: { xs: 2.5, sm: 4 },
-          borderRadius: 3,
-          backgroundColor: themeColors.paper,
-          boxShadow: '0 2px 16px #e0e0e0',
-          minHeight: 400,
-          maxWidth: 1300,
-          width: '100%',
-          mx: 'auto',
-        }}>
-          <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: themeColors.paper, borderRadius: 2, boxShadow: 'none' }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', color: themeColors.textPrimary }}>
-              Student Grades
+          <Box sx={{ width: '100%', maxWidth: 1300, mb: 1.5 }}>
+            <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: themeColors.primaryDark, mb: 0.2, letterSpacing: '.02em', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: 1 }}>
+              <GradeIcon fontSize="medium" sx={{ color: themeColors.primaryDark, mb: '-4px' }} />
+              My Grades
             </Typography>
-            <FormControl fullWidth size="small">
-              <InputLabel id="student-select-label">Select Student</InputLabel>
-              <Select
-                labelId="student-select-label"
-                id="student-select"
-                value={selectedStudent}
-                label="Select Student"
-                onChange={e => setSelectedStudent(e.target.value)}
-                sx={{ bgcolor: themeColors.paper }}
-              >
-                <MenuItem value="" disabled={masterDataLoading && students.length === 0}> {/* מניעת בחירה אם עדיין טוען סטודנטים */}
-                  <em>None</em>
-                </MenuItem>
-                {students.map((student) => (
-                  <MenuItem key={student.studentId} value={student.studentId}>
-                    {student.firstName} {student.lastName} ({student.studentId})
+            <Typography variant="subtitle1" sx={{ color: themeColors.textSecondary, fontWeight: 400, fontSize: '0.98rem' }}>
+              View your grades by course and semester
+            </Typography>
+          </Box>
+          <Paper elevation={3} sx={{
+            p: { xs: 2.5, sm: 4 },
+            borderRadius: 3,
+            backgroundColor: themeColors.paper,
+            boxShadow: '0 2px 16px #e0e0e0',
+            minHeight: 400,
+            width: '100%',
+          }}>
+            <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: themeColors.paper, borderRadius: 2, boxShadow: 'none' }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', color: themeColors.textPrimary }}>
+                Student Grades
+              </Typography>
+              <FormControl fullWidth size="small">
+                <InputLabel id="student-select-label">Select Student</InputLabel>
+                <Select
+                  labelId="student-select-label"
+                  id="student-select"
+                  value={selectedStudent}
+                  label="Select Student"
+                  onChange={e => setSelectedStudent(e.target.value)}
+                  sx={{ bgcolor: themeColors.paper }}
+                >
+                  <MenuItem value="" disabled={masterDataLoading && students.length === 0}> {/* מניעת בחירה אם עדיין טוען סטודנטים */}
+                    <em>None</em>
                   </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Paper>
-          {showPageLoadingIndicator ? ( // הצג חיווי טעינה ראשי
-            <Box sx={{ textAlign: 'center', py: 6 }}>
-              <Typography variant="h6" color="textSecondary">Loading grades...</Typography>
-            </Box>
-          ) : !selectedStudent ? ( // אם אין סטודנט נבחר (לאחר שכל הטעינות הסתיימו)
-            <Paper elevation={3} sx={{ p: 3, textAlign: 'center', borderRadius: 2, backgroundColor: themeColors.paper }}>
-              <Typography variant="h6" sx={{ color: themeColors.textSecondary }}>
-                Please select a student to view their grades.
-              </Typography>
+                  {students.map((student) => (
+                    <MenuItem key={student.studentId} value={student.studentId}>
+                      {student.firstName} {student.lastName} ({student.studentId})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Paper>
-          ) : submissionsLoading ? ( // אם נבחר סטודנט אבל עדיין טוענים את ההגשות שלו
-            <Box sx={{ textAlign: 'center', py: 6 }}>
-              <Typography variant="h6" color="textSecondary">Loading student's grades data...</Typography>
-            </Box>
-          ) : Object.keys(grouped).length === 0 && !masterDataLoading && !isResolvingUrlStudent ? ( // אם אין ציונים להצגה (לאחר שכל הטעינות הסתיימו)
-            <Box sx={{ textAlign: 'center', mt: 4 }}>
-              <Typography variant="h6" color="textSecondary">
-                No grades found for the selected student.
-              </Typography>
-            </Box>
-          ) : (
-            Object.entries(grouped)
-              .sort(([a], [b]) => getSemesterIndex(a) - getSemesterIndex(b))
-              .map(([semester, coursesObj], idx) => (
-                <Accordion key={semester} defaultExpanded={idx === 0} sx={{ mb: 2, backgroundColor: themeColors.paper, borderRadius: 2, boxShadow: 'none', border: `1px solid ${themeColors.secondary}` }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 56 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      <Typography variant="h5" component="h2" sx={{
-                        color: themeColors.primaryDark,
-                        fontWeight: 'bold',
-                        letterSpacing: '.03em',
-                        fontSize: '1.05rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                      }}>
-                        <span style={{ fontWeight: 700, textTransform: 'capitalize', marginRight: 4 }}>{semester}</span>
-                        <span style={{ fontWeight: 400 }}>Semester</span>
-                      </Typography>
-                      <Chip
-                        label={`${Object.keys(coursesObj).length} Courses`}
-                        sx={{ ml: 2, backgroundColor: themeColors.primary, color: '#222', fontWeight: 600, letterSpacing: '.01em', boxShadow: '0 1px 4px #e0e0e0' }}
-                        size="small"
-                      />
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    {Object.entries(coursesObj)
-                      .filter(([_, { assignments }]) => assignments.length > 0)
-                      .map(([courseName, { course, assignments }], courseIdx, arr) => {
-                        const avg = getCourseAverage(assignments, course.courseId);
-                        const finalGrade = getFinalGrade(assignments, course.courseId);
-                        const finalGradeStyle = getFinalGradeStyle(finalGrade);
-                        return (
-                          <Box key={courseName} sx={{ mb: 3, p: 2.5, background: '#f8faf5', borderRadius: 2, boxShadow: '0 1px 6px #e0e0e0' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.2 }}>
-                              <SchoolIcon sx={{ color: themeColors.primaryDark, mr: 1, fontSize: '1.5rem' }} />
-                              <Typography variant="h6" sx={{ color: themeColors.primaryDark, fontWeight: 700, fontSize: '1.13rem', letterSpacing: '.01em', mr: 2 }}>
-                                {courseName}
-                              </Typography>
-                              {typeof avg === 'number' && (
-                                <Box sx={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  background: '#e3f0fa',
-                                  color: '#1976d2',
-                                  fontWeight: 400,
-                                  fontSize: '0.93rem',
-                                  borderRadius: 1.5,
-                                  px: 1.1,
-                                  py: 0.3,
-                                  ml: 1,
-                                  boxShadow: 'none',
-                                  border: 'none',
-                                  opacity: 0.85
-                                }}>
-                                  <BarChartIcon sx={{ fontSize: '1.05rem', mr: 0.5, color: '#1976d2', opacity: 0.7 }} />
-                                  Avg: {avg}
-                                </Box>
+            {showPageLoadingIndicator ? ( // הצג חיווי טעינה ראשי
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <Typography variant="h6" color="textSecondary">Loading grades...</Typography>
+              </Box>
+            ) : !selectedStudent ? ( // אם אין סטודנט נבחר (לאחר שכל הטעינות הסתיימו)
+              <Paper elevation={3} sx={{ p: 3, textAlign: 'center', borderRadius: 2, backgroundColor: themeColors.paper }}>
+                <Typography variant="h6" sx={{ color: themeColors.textSecondary }}>
+                  Please select a student to view their grades.
+                </Typography>
+              </Paper>
+            ) : submissionsLoading ? ( // אם נבחר סטודנט אבל עדיין טוענים את ההגשות שלו
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <Typography variant="h6" color="textSecondary">Loading student's grades data...</Typography>
+              </Box>
+            ) : Object.keys(grouped).length === 0 && !masterDataLoading && !isResolvingUrlStudent ? ( // אם אין ציונים להצגה (לאחר שכל הטעינות הסתיימו)
+              <Box sx={{ textAlign: 'center', mt: 4 }}>
+                <Typography variant="h6" color="textSecondary">
+                  No grades found for the selected student.
+                </Typography>
+              </Box>
+            ) : (
+              Object.entries(grouped)
+                .sort(([a], [b]) => getSemesterIndex(a) - getSemesterIndex(b))
+                .map(([semester, coursesObj], idx) => (
+                  <Accordion key={semester} defaultExpanded={idx === 0} sx={{ mb: 2, backgroundColor: themeColors.paper, borderRadius: 2, boxShadow: 'none', border: `1px solid ${themeColors.secondary}` }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 56 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        <Typography variant="h5" component="h2" sx={{
+                          color: themeColors.primaryDark,
+                          fontWeight: 'bold',
+                          letterSpacing: '.03em',
+                          fontSize: '1.05rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}>
+                          <span style={{ fontWeight: 700, textTransform: 'capitalize', marginRight: 4 }}>{semester}</span>
+                          <span style={{ fontWeight: 400 }}>Semester</span>
+                        </Typography>
+                        <Chip
+                          label={`${Object.keys(coursesObj).length} Courses`}
+                          sx={{ ml: 2, backgroundColor: themeColors.primary, color: '#222', fontWeight: 600, letterSpacing: '.01em', boxShadow: '0 1px 4px #e0e0e0' }}
+                          size="small"
+                        />
+                      </Box>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      {Object.entries(coursesObj)
+                        .filter(([_, { assignments }]) => assignments.length > 0)
+                        .map(([courseName, { course, assignments }], courseIdx, arr) => {
+                          const avg = getCourseAverage(assignments, course.courseId);
+                          const finalGrade = getFinalGrade(assignments, course.courseId);
+                          const finalGradeStyle = getFinalGradeStyle(finalGrade);
+                          return (
+                            <Box key={courseName} sx={{ mb: 3, p: 2.5, background: '#f8faf5', borderRadius: 2, boxShadow: '0 1px 6px #e0e0e0' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.2 }}>
+                                <SchoolIcon sx={{ color: themeColors.primaryDark, mr: 1, fontSize: '1.5rem' }} />
+                                <Typography variant="h6" sx={{ color: themeColors.primaryDark, fontWeight: 700, fontSize: '1.13rem', letterSpacing: '.01em', mr: 2 }}>
+                                  {courseName}
+                                </Typography>
+                                {typeof avg === 'number' && (
+                                  <Box sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    background: '#e3f0fa',
+                                    color: '#1976d2',
+                                    fontWeight: 400,
+                                    fontSize: '0.93rem',
+                                    borderRadius: 1.5,
+                                    px: 1.1,
+                                    py: 0.3,
+                                    ml: 1,
+                                    boxShadow: 'none',
+                                    border: 'none',
+                                    opacity: 0.85
+                                  }}>
+                                    <BarChartIcon sx={{ fontSize: '1.05rem', mr: 0.5, color: '#1976d2', opacity: 0.7 }} />
+                                    Avg: {avg}
+                                  </Box>
+                                )}
+                              </Box>
+                              {finalGrade && (
+                                <Tooltip title="Weighted average of all assignments (final grade)" arrow>
+                                  <Box sx={{
+                                    mb: 2,
+                                    px: 1.2,
+                                    py: 0.6,
+                                    borderRadius: 2,
+                                    background: '#eaf5d3',
+                                    color: '#a7bc2a',
+                                    fontWeight: 500,
+                                    fontSize: '1.07rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'flex-start',
+                                    boxShadow: 'none',
+                                    letterSpacing: '.01em',
+                                    border: '1px solid #a7bc2a55',
+                                    opacity: 1
+                                  }}>
+                                    <GradeIcon sx={{ mr: 1, fontSize: '1.08rem', color: '#a7bc2a', opacity: 0.7 }} />
+                                    Final Grade: {finalGrade}
+                                  </Box>
+                                </Tooltip>
                               )}
+                              <Grid container spacing={2}>
+                                {assignments.map(assignment => {
+                                  const grade = getGrade(assignment.assignmentId, assignment.courseId);
+                                  const status = getAssignmentStatus(assignment.dueDate, grade);
+                                  return (
+                                    <Grid item xs={12} sm={6} md={4} lg={3} key={assignment.assignmentId}>
+                                      <Card
+                                        elevation={2}
+                                        sx={{
+                                          borderRadius: 2,
+                                          backgroundColor: '#fff',
+                                          boxShadow: '0 1px 6px rgba(34, 34, 34, 0.06)',
+                                          border: `1px solid ${themeColors.secondary}`,
+                                          cursor: 'pointer',
+                                          transition: 'transform 0.18s, box-shadow 0.18s',
+                                          '&:hover': {
+                                            transform: 'translateY(-2px) scale(1.01)',
+                                            boxShadow: '0 3px 12px rgba(34, 34, 34, 0.11)',
+                                            borderColor: themeColors.primaryDark,
+                                          },
+                                          minHeight: 170,
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          justifyContent: 'space-between',
+                                        }}
+                                        onClick={() => { setDialogAssignment({ ...assignment, grade, status, courseName }); setOpenAssignmentDialog(true); }}
+                                      >
+                                        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                            <AssignmentTurnedInIcon sx={{ color: themeColors.primary, mr: 1 }} />
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: themeColors.textPrimary }}>
+                                              {assignment.assignmentName}
+                                            </Typography>
+                                          </Box>
+                                          <Divider sx={{ my: 1 }} />
+                                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                            <Typography variant="body2" sx={{ color: themeColors.textSecondary }}>
+                                              Weight: {assignment.weight}%
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ color: themeColors.textSecondary }}>
+                                              Due: {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'N/A'}
+                                            </Typography>
+                                          </Box>
+                                        </CardContent>
+                                        <Box sx={{ p: 1.5, pt: 0, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                          <Tooltip title="Click for details" arrow>
+                                            <Chip
+                                              label={grade !== null ? `Grade: ${grade}` : 'No Grade'}
+                                              color={getGradeChipColor(grade)}
+                                              size="small"
+                                              sx={{ fontWeight: 600, fontSize: '0.97rem', backgroundColor:
+                                                getGradeChipColor(grade) === 'success' ? '#eaf5d3' :
+                                                getGradeChipColor(grade) === 'warning' ? '#fff7d6' :
+                                                getGradeChipColor(grade) === 'error' ? '#fbeaea' : '#f3f3f3',
+                                                color:
+                                                  getGradeChipColor(grade) === 'success' ? themeColors.primaryDark :
+                                                  getGradeChipColor(grade) === 'warning' ? '#bfa100' :
+                                                  getGradeChipColor(grade) === 'error' ? '#b71c1c' : '#888',
+                                                cursor: 'pointer',
+                                                '&:hover': { boxShadow: '0 2px 8px #e0e0e0', opacity: 0.95 },
+                                              }}
+                                            />
+                                          </Tooltip>
+                                        </Box>
+                                      </Card>
+                                    </Grid>
+                                  );
+                                })}
+                              </Grid>
+                              {courseIdx < arr.length - 1 && <Box sx={{ mt: 2, mb: 1 }}><hr style={{ border: 'none', borderTop: '1px solid #e0e0e0' }} /></Box>}
                             </Box>
-                            {finalGrade && (
-                              <Tooltip title="Weighted average of all assignments (final grade)" arrow>
-                                <Box sx={{
-                                  mb: 2,
-                                  px: 1.2,
-                                  py: 0.6,
-                                  borderRadius: 2,
-                                  background: '#eaf5d3',
-                                  color: '#a7bc2a',
-                                  fontWeight: 500,
-                                  fontSize: '1.07rem',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'flex-start',
-                                  boxShadow: 'none',
-                                  letterSpacing: '.01em',
-                                  border: '1px solid #a7bc2a55',
-                                  opacity: 1
-                                }}>
-                                  <GradeIcon sx={{ mr: 1, fontSize: '1.08rem', color: '#a7bc2a', opacity: 0.7 }} />
-                                  Final Grade: {finalGrade}
-                                </Box>
-                              </Tooltip>
-                            )}
-                            <Grid container spacing={2}>
-                              {assignments.map(assignment => {
-                                const grade = getGrade(assignment.assignmentId, assignment.courseId);
-                                const status = getAssignmentStatus(assignment.dueDate, grade);
-                                return (
-                                  <Grid item xs={12} sm={6} md={4} lg={3} key={assignment.assignmentId}>
-                                    <Card
-                                      elevation={2}
-                                      sx={{
-                                        borderRadius: 2,
-                                        backgroundColor: '#fff',
-                                        boxShadow: '0 1px 6px rgba(34, 34, 34, 0.06)',
-                                        border: `1px solid ${themeColors.secondary}`,
-                                        cursor: 'pointer',
-                                        transition: 'transform 0.18s, box-shadow 0.18s',
-                                        '&:hover': {
-                                          transform: 'translateY(-2px) scale(1.01)',
-                                          boxShadow: '0 3px 12px rgba(34, 34, 34, 0.11)',
-                                          borderColor: themeColors.primaryDark,
-                                        },
-                                        minHeight: 170,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        justifyContent: 'space-between',
-                                      }}
-                                      onClick={() => { setDialogAssignment({ ...assignment, grade, status, courseName }); setOpenAssignmentDialog(true); }}
-                                    >
-                                      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                          <AssignmentTurnedInIcon sx={{ color: themeColors.primary, mr: 1 }} />
-                                          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: themeColors.textPrimary }}>
-                                            {assignment.assignmentName}
-                                          </Typography>
-                                        </Box>
-                                        <Divider sx={{ my: 1 }} />
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                          <Typography variant="body2" sx={{ color: themeColors.textSecondary }}>
-                                            Weight: {assignment.weight}%
-                                          </Typography>
-                                          <Typography variant="body2" sx={{ color: themeColors.textSecondary }}>
-                                            Due: {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'N/A'}
-                                          </Typography>
-                                        </Box>
-                                      </CardContent>
-                                      <Box sx={{ p: 1.5, pt: 0, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                        <Tooltip title="Click for details" arrow>
-                                          <Chip
-                                            label={grade !== null ? `Grade: ${grade}` : 'No Grade'}
-                                            color={getGradeChipColor(grade)}
-                                            size="small"
-                                            sx={{ fontWeight: 600, fontSize: '0.97rem', backgroundColor:
-                                              getGradeChipColor(grade) === 'success' ? '#eaf5d3' :
-                                              getGradeChipColor(grade) === 'warning' ? '#fff7d6' :
-                                              getGradeChipColor(grade) === 'error' ? '#fbeaea' : '#f3f3f3',
-                                              color:
-                                                getGradeChipColor(grade) === 'success' ? themeColors.primaryDark :
-                                                getGradeChipColor(grade) === 'warning' ? '#bfa100' :
-                                                getGradeChipColor(grade) === 'error' ? '#b71c1c' : '#888',
-                                              cursor: 'pointer',
-                                              '&:hover': { boxShadow: '0 2px 8px #e0e0e0', opacity: 0.95 },
-                                            }}
-                                          />
-                                        </Tooltip>
-                                      </Box>
-                                    </Card>
-                                  </Grid>
-                                );
-                              })}
-                            </Grid>
-                            {courseIdx < arr.length - 1 && <Box sx={{ mt: 2, mb: 1 }}><hr style={{ border: 'none', borderTop: '1px solid #e0e0e0' }} /></Box>}
-                          </Box>
-                        );
-                      })}
-                  </AccordionDetails>
-                </Accordion>
-              ))
-          )}
-        </Paper>
+                          );
+                        })}
+                    </AccordionDetails>
+                  </Accordion>
+                ))
+            )}
+          </Paper>
+        </Box>
       </Container>
       <Dialog open={openAssignmentDialog} onClose={() => { setOpenAssignmentDialog(false); setDialogAssignment(null); }} maxWidth="sm" fullWidth>
         {dialogAssignment ? (

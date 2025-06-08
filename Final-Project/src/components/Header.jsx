@@ -28,13 +28,15 @@ const pages = [
   { name: 'Courses', link: '/courses' },
   { name: 'Assignments', link: '/assignments' },
   { name: 'Grades', link: '/grades' },
-  { name: 'Info', link: '/info' },
+  { name: 'Student Analytics', link: '/info' },
   { name: 'Help', link: '/help' },
 ];
 
 const managementMenu = {
   name: 'Management',
   items: [
+    { name: 'Course Analytics', link: '/course-analytics' },
+    { isDivider: true },
     // Courses
     { name: 'Manage Courses', link: '/coursesmanagement' }, // Matches App.jsx
     { name: 'Add New Course', link: '/courseform' },      // Matches App.jsx
@@ -88,6 +90,11 @@ function ResponsiveAppBar() {
   const handleCloseNavMenu = () => setAnchorElNav(null);
 
   const handleNavigate = (link) => {
+    // If already on the target page, force a reload to reset state
+    if (window.location.pathname === link) {
+      window.location.replace(link);
+      return;
+    }
     if (link === '/assignments' || link === '/courses' || link === '/grades' || link === '/info' || link === '/') {
       window.location.href = link;
       return;

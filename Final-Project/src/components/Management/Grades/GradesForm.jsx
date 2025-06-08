@@ -9,10 +9,10 @@ import {
 import HomeIcon from '@mui/icons-material/Home';
 import SaveIcon from '@mui/icons-material/Save';
 // import { saveSubmission, getSubmissionsByCourseAndAssignment } from '../firebase/grades';
-import { getSubmissionsByCourseAndAssignment, saveSubmission } from '../firebase/grades'; // Only use submissions logic
-import { listCourses } from '../firebase/courses';
-import { listAssignments } from '../firebase/assignments';
-import { listStudents } from '../firebase/students';
+import { getSubmissionsByCourseAndAssignment, saveSubmission } from '../../../firebase/grades';
+import { listCourses } from '../../../firebase/courses';
+import { listAssignments } from '../../../firebase/assignments';
+import { listStudents } from '../../../firebase/students';
 
 const colors = {
   green: '#bed630',
@@ -231,7 +231,6 @@ export default function GradesForm() {
         <Link component={RouterLink} underline="hover" color="inherit" to="/GradesManagement"> Grades Management </Link>
         <Typography color="text.primary">Grades Entry</Typography>
       </Breadcrumbs>
-
       <Box component="form" onSubmit={handleSubmit} sx={{ backgroundColor: colors.white, p: 4, borderRadius: 2, boxShadow: 3 }}>
         <Typography variant="h5" align="center" fontWeight="600" gutterBottom> Grades Entry </Typography>
         <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 3 }}>

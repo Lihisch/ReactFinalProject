@@ -9,8 +9,8 @@ import {
 import HomeIcon from '@mui/icons-material/Home';
 import SchoolIcon from '@mui/icons-material/School';
 import SaveIcon from '@mui/icons-material/Save';
-import { listStudents, updateStudent } from '../firebase/students';
-import { listCourses } from '../firebase/courses';
+import { listStudents, updateStudent } from '../../../firebase/students';
+import { listCourses } from '../../../firebase/courses';
 
 
 const colors = {

@@ -20,12 +20,12 @@ import DangerousIcon from '@mui/icons-material/Dangerous';
 import EditIcon from '@mui/icons-material/Edit';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import PercentIcon from '@mui/icons-material/Percent';
-import { getAllSubmissions } from '../firebase/grades';
-import { listCourses } from '../firebase/courses';
-import { listAssignments } from '../firebase/assignments';
-import { listStudents } from '../firebase/students';
+import { getAllSubmissions } from '../../../firebase/grades';
+import { listCourses } from '../../../firebase/courses';
+import { listAssignments } from '../../../firebase/assignments';
+import { listStudents } from '../../../firebase/students';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
-import { firestore } from '../firebase/firebase-settings';
+import { firestore } from '../../../firebase/firebase-settings';
 
 
 const colors = {
@@ -530,7 +530,6 @@ export default function GradesManagement() {
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-
       <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
         <Link component={RouterLink} underline="hover" sx={{ display: 'flex', alignItems: 'center' }} color="inherit" to="/"> <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" /> Home </Link>
         <Typography color="text.primary">Grades Management</Typography>

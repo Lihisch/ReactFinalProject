@@ -1,0 +1,25 @@
+/**
+ * CourseAnalytics Folder
+ * 
+ * This folder contains components related to the CourseAnalytics functionality.
+ * Each component is designed to handle specific aspects of course analytics, providing
+ * a modular and maintainable structure for displaying course-related data and insights.
+ * 
+ * Components:
+ * - StatCards.jsx: Displays top statistics cards (average, enrolled students, pass rate, top grade)
+ * - GradeDistribution.jsx: Displays the course grade distribution chart
+ * - AssignmentBreakdown.jsx: Displays grade distribution by assignments in the course
+ * - StudentGradeTable.jsx: Displays a table of student grades in the course with filtering options
+ * - StudentsDialog.jsx: Dialog to display students in a specific grade range (triggered by clicking on a graph)
+ */
+
+import { firestore } from '../../firebase/firebase-settings';
+
+src/
+  components/
+    CourseAnalytics/
+      StatCards.jsx           # Displays top statistics cards (average, enrolled students, pass rate, top grade)
+      GradeDistribution.jsx   # Displays the course grade distribution chart
+      AssignmentBreakdown.jsx # Displays grade distribution by assignments in the course
+      StudentGradeTable.jsx   # Displays a table of student grades in the course with filtering options
+      StudentsDialog.jsx      # Dialog to display students in a specific grade range (triggered by clicking on a graph)

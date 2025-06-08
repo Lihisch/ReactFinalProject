@@ -11,7 +11,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import InfoIcon from '@mui/icons-material/Info';
 import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
-import { addCourse, updateCourse, getCourseById } from '../firebase/courses';
+import { addCourse, updateCourse, getCourseById } from '../../../firebase/courses';
 
 const colors = {
   green: '#bed630',
@@ -219,7 +219,6 @@ export default function CourseForm() {
         </Link>
         <Typography color="text.primary">{isEditMode ? 'Edit Course' : 'Add Course'}</Typography>
       </Breadcrumbs>
-
       <Box component="form" onSubmit={handleSubmit} sx={{ backgroundColor: colors.white, p: 2, borderRadius: 2, boxShadow: 3 }}>
         <Typography variant="h5" align="center" fontWeight="600" gutterBottom sx={{ mb: 2 }}>
           {pageTitle}

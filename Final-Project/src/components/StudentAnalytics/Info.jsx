@@ -9,7 +9,12 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Legend, Tooltip as RechartsTooltip } from 'recharts';
 import { BarChart, Bar, Cell } from 'recharts';
 import { collection, getDocs } from 'firebase/firestore';
-import { firestore } from '../firebase/firebase-settings';
+import { firestore } from '../../firebase/firebase-settings';
+import StudentAnalytics from './StudentAnalytics';
+import StatCard from './StatCard';
+import ChartContainer from './ChartContainer';
+import EmptyState from './EmptyState';
+import CourseAnalytics from '../CourseAnalytics/CourseAnalytics';
 
 const themeColors = {
   primary: '#bed630',
@@ -30,7 +35,7 @@ const themeColors = {
   chartHighlight: '#a7bc2a',
 };
 
-const StudentDashboard = () => {
+const Info = () => {
   const [assignments, setAssignments] = useState([]);
   const [courses, setCourses] = useState([]);
   const [submissions, setSubmissions] = useState([]);
@@ -41,29 +46,20 @@ const StudentDashboard = () => {
 
   const MAX_X_AXIS_LABEL_LINE_LENGTH = 18;
 
-  // Force reset when component mounts or when returning to this page
   useEffect(() => {
     setSelectedStudentId('');
     setSelectedCourseId('');
   }, []);
 
-  // Also reset when location changes (for cases when navigating back to INFO)
   useEffect(() => {
     const handleReset = () => {
       setSelectedStudentId('');
       setSelectedCourseId('');
     };
-
-    // Listen for popstate events (back/forward navigation)
     window.addEventListener('popstate', handleReset);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('popstate', handleReset);
-    };
+    return () => window.removeEventListener('popstate', handleReset);
   }, []);
 
-  // Fetch and sort data
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -74,13 +70,11 @@ const StudentDashboard = () => {
           getDocs(collection(firestore, 'courses')),
           getDocs(collection(firestore, 'submissions'))
         ]);
-
         const studentsData = studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const sortedStudents = studentsData.sort((a, b) => {
           const lastNameComparison = (a.lastName || '').localeCompare(b.lastName || '');
           return lastNameComparison || (a.firstName || '').localeCompare(b.firstName || '');
         });
-
         setStudents(sortedStudents);
         setAssignments(assignmentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         setCourses(coursesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -94,11 +88,9 @@ const StudentDashboard = () => {
     fetchData();
   }, []);
 
-  // Helper function to calculate grade statistics
   const getGradeStats = (submissionList) => {
     const validGrades = submissionList.map(s => s.grade).filter(g => typeof g === 'number');
     if (!validGrades.length) return { average: null, max: null, count: 0 };
-    
     return {
       average: validGrades.reduce((a, b) => a + b, 0) / validGrades.length,
       max: Math.max(...validGrades),
@@ -106,35 +98,26 @@ const StudentDashboard = () => {
     };
   };
 
-  // Helper function for navigation
   const handleHomeClick = (e) => {
     e.preventDefault();
-    // Reset selections and navigate to home
     setSelectedStudentId('');
     setSelectedCourseId('');
-    // If you're using React Router, replace this with your navigation method
     window.location.href = '/';
   };
 
-  // Selected student and related data
   const studentData = useMemo(() => {
     const student = students.find(s => s.studentId === selectedStudentId);
     if (!student) return null;
-
     const studentCourses = courses.filter(c => student.enrolledCourses?.includes(c.courseId));
     const studentAssignments = assignments.filter(a => student.enrolledCourses?.includes(a.courseId));
     const studentSubmissions = submissions.filter(s => s.studentId === selectedStudentId);
-
     return { student, studentCourses, studentAssignments, studentSubmissions };
   }, [students, courses, assignments, submissions, selectedStudentId]);
 
-  // Overall statistics
   const overallStats = useMemo(() => {
     if (!studentData) return null;
-
     const { studentAssignments, studentSubmissions } = studentData;
     const gradeStats = getGradeStats(studentSubmissions);
-
     return {
       avgGrade: gradeStats.average ? gradeStats.average.toFixed(1) : 'N/A',
       topGrade: gradeStats.max || 'N/A',
@@ -144,17 +127,13 @@ const StudentDashboard = () => {
     };
   }, [studentData]);
 
-  // Course-specific data
   const courseData = useMemo(() => {
     if (!selectedCourseId || !studentData) return null;
-
     const courseAssignments = assignments.filter(a => a.courseId === selectedCourseId && studentData.student.enrolledCourses?.includes(a.courseId));
     const courseSubmissions = submissions.filter(s => s.courseId === selectedCourseId && s.studentId === selectedStudentId);
     const classSubmissions = submissions.filter(s => s.courseId === selectedCourseId);
-
     const studentGradeStats = getGradeStats(courseSubmissions);
     const classGradeStats = getGradeStats(classSubmissions);
-
     return {
       assignments: courseAssignments,
       submissions: courseSubmissions,
@@ -168,15 +147,12 @@ const StudentDashboard = () => {
     };
   }, [assignments, submissions, selectedCourseId, selectedStudentId, studentData]);
 
-  // Grade distribution for bar chart
   const gradeDistribution = useMemo(() => {
     if (!courseData?.hasData) return [];
-
     const gradeBins = [60, 70, 80, 90, 101];
     const binLabels = ["60-69", "70-79", "80-89", "90-100"];
     const allGrades = courseData.classSubmissions.map(s => s.grade).filter(g => typeof g === 'number');
     const studentGrade = courseData.submissions.map(s => s.grade).find(g => typeof g === 'number');
-
     return binLabels.map((label, i) => {
       const min = gradeBins[i];
       const max = gradeBins[i + 1] - 1;
@@ -186,17 +162,14 @@ const StudentDashboard = () => {
     });
   }, [courseData]);
 
-  // Overall trend data
   const overallTrendData = useMemo(() => {
     if (!studentData) return [];
-
     const allAssignments = assignments
       .filter(a => studentData.student.enrolledCourses?.includes(a.courseId))
       .sort((a, b) => {
         const courseComparison = courses.findIndex(c => c.courseId === a.courseId) - courses.findIndex(c => c.courseId === b.courseId);
         return courseComparison || new Date(a.dueDate) - new Date(b.dueDate);
       });
-
     return allAssignments
       .map(a => {
         const submission = submissions.find(s => s.assignmentId === a.assignmentId && s.studentId === studentData.student.studentId && typeof s.grade === 'number');
@@ -210,7 +183,6 @@ const StudentDashboard = () => {
       .filter(d => d.grade !== null);
   }, [studentData, assignments, submissions, courses]);
 
-  // Reusable components
   const StatCard = ({ title, value }) => (
     <Card sx={{
       p: 3,
@@ -279,7 +251,6 @@ const StudentDashboard = () => {
     const words = label.split(' ');
     let lines = [];
     let current = '';
-
     words.forEach(word => {
       if ((current + ' ' + word).length > MAX_X_AXIS_LABEL_LINE_LENGTH) {
         lines.push(current);
@@ -289,7 +260,6 @@ const StudentDashboard = () => {
       }
     });
     if (current) lines.push(current);
-
     return (
       <g transform={`translate(${x}, ${y})`}>
         {lines.map((line, i) => (
@@ -307,24 +277,6 @@ const StudentDashboard = () => {
       </g>
     );
   };
-
-  const EmptyState = () => (
-    <Paper sx={{
-      p: 6,
-      textAlign: 'center',
-      border: `1px solid ${themeColors.border}`,
-      borderRadius: 2,
-      backgroundColor: themeColors.secondary,
-      boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-    }}>
-      <Typography variant="h5" sx={{ fontWeight: 600, color: themeColors.textPrimary, mb: 2 }}>
-        Student Analytics Dashboard
-      </Typography>
-      <Typography variant="body1" sx={{ color: themeColors.textSecondary }}>
-        Select a student from the dropdown above to view their academic performance data.
-      </Typography>
-    </Paper>
-  );
 
   if (loading) {
     return (
@@ -355,51 +307,35 @@ const StudentDashboard = () => {
       }}
     >
       <Container maxWidth={false} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Box sx={{ width: '100%', maxWidth: 1300, mb: 2, alignSelf: 'flex-start' }}>
-          <Breadcrumbs sx={{ mb: 4 }}>
+        <Box sx={{ width: '100%', maxWidth: 1300, mb: 3, mt: 2 }}>
+          <Breadcrumbs sx={{ mb: 1, color: themeColors.textSecondary, fontSize: '1rem' }}>
             <Link 
               underline="hover" 
               color="inherit" 
               onClick={handleHomeClick}
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                color: themeColors.textSecondary,
-                cursor: 'pointer',
-                '&:hover': { color: themeColors.primary }
-              }}
+              sx={{ display: 'flex', alignItems: 'center', color: themeColors.textSecondary, cursor: 'pointer', '&:hover': { color: themeColors.primary } }}
             >
-              <HomeIcon sx={{ mr: 0.5, fontSize: 16 }} />
+              <HomeIcon sx={{ mr: 0.5, fontSize: 18 }} />
               Home
             </Link>
-            <Typography 
-              color={themeColors.textPrimary} 
-              sx={{ display: 'flex', alignItems: 'center' }}
-            >
+            <Typography color={themeColors.textPrimary} sx={{ display: 'flex', alignItems: 'center', fontSize: '1rem' }}>
               Student Analytics
             </Typography>
           </Breadcrumbs>
-        </Box>
-
-        <Box sx={{ width: '100%', maxWidth: 1300, mb: 1.5 }}>
-          <Typography variant="h4" component="h1" sx={{ 
-            fontWeight: 700, 
-            color: themeColors.primaryDark, 
-            mb: 0.2, 
-            letterSpacing: '.02em', 
-            fontSize: '1.5rem', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1 
+          <Typography variant="h3" component="h1" sx={{
+            fontWeight: 700,
+            color: themeColors.primaryDark,
+            letterSpacing: '.02em',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            mt: 1,
+            mb: 0.5
           }}>
-            <AssessmentIcon fontSize="medium" sx={{ color: themeColors.primaryDark, mb: '-4px' }} />
+            <AssessmentIcon fontSize="large" sx={{ color: themeColors.primary, mb: '-6px' }} />
             Student Analytics
           </Typography>
-          <Typography variant="subtitle1" sx={{ 
-            color: themeColors.textSecondary, 
-            fontWeight: 400, 
-            fontSize: '0.98rem' 
-          }}>
+          <Typography variant="subtitle1" sx={{ color: themeColors.textSecondary, fontWeight: 400, fontSize: '1.08rem', mb: 1 }}>
             View and analyze student performance across all courses
           </Typography>
         </Box>
@@ -716,7 +652,7 @@ const StudentDashboard = () => {
   );
 };
 
-export default StudentDashboard;
+export default Info;
 
 
 

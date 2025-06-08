@@ -19,6 +19,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
+import { Link as MuiLink } from '@mui/material';
 
 const themeColors = {
   primary: '#bed630',
@@ -220,313 +221,296 @@ export default function Help() {
   return (
     <Box sx={{ backgroundColor: themeColors.background, minHeight: 'calc(100vh - 64px)', py: 4 }}>
       <Container maxWidth={false} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Box sx={{ width: '100%', maxWidth: 1300, mb: 2, alignSelf: 'flex-start' }}>
-          <Breadcrumbs aria-label="breadcrumb">
-            <Link 
-              component={RouterLink} 
-              underline="hover" 
-              sx={{ display: 'flex', alignItems: 'center' }} 
-              color="inherit" 
+        <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto', px: { xs: 1, sm: 3, md: 4 } }}>
+          <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+            <MuiLink
+              component={RouterLink}
+              underline="hover"
+              sx={{ display: 'flex', alignItems: 'center' }}
+              color="inherit"
               to="/"
             >
-              <HomeIcon sx={{ mr: 0.5, fontSize: 16 }} />
+              <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
               Home
-            </Link>
-            <Typography color={themeColors.textPrimary} sx={{ display: 'flex', alignItems: 'center' }}>
-              Help Center
+            </MuiLink>
+            <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
+              Help
             </Typography>
           </Breadcrumbs>
-        </Box>
-
-        <Box sx={{ width: '100%', maxWidth: 1300, mb: 1.5 }}>
-          <Typography variant="h4" component="h1" sx={{ 
-            fontWeight: 700, 
-            color: themeColors.primaryDark, 
-            mb: 0.2, 
-            letterSpacing: '.02em', 
-            fontSize: '1.5rem', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1 
-          }}>
-            <HelpOutlineIcon fontSize="medium" sx={{ color: themeColors.primaryDark, mb: '-4px' }} />
-            Help Center
-          </Typography>
-          <Typography variant="subtitle1" sx={{ 
-            color: themeColors.textSecondary, 
-            fontWeight: 400, 
-            fontSize: '0.98rem' 
-          }}>
-            Find answers, learn features, and get support for using the student portal
-          </Typography>
-        </Box>
-
-        <Paper elevation={3} sx={{
-          p: { xs: 2.5, sm: 4 },
-          borderRadius: 3,
-          backgroundColor: themeColors.paper,
-          boxShadow: '0 2px 16px #e0e0e0',
-          minHeight: 400,
-          maxWidth: 1300,
-          width: '100%',
-          mx: 'auto',
-        }}>
-          {/* Search Section */}
-          <Box sx={{ mb: 4, textAlign: 'center' }}>
-            <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: themeColors.textPrimary }}>
-              How can we help you today?
+          <Box sx={{ width: '100%', maxWidth: 1300, mb: 1.5 }}>
+            <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: themeColors.primaryDark, mb: 0.2, letterSpacing: '.02em', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: 1 }}>
+              <HelpOutlineIcon fontSize="medium" sx={{ color: themeColors.primaryDark, mb: '-4px' }} />
+              Help Center
             </Typography>
-            <Typography variant="body1" color={themeColors.textSecondary} sx={{ mb: 3 }}>
-              Search for help topics, browse guides, or jump directly to different sections
+            <Typography variant="subtitle1" sx={{ color: themeColors.textSecondary, fontWeight: 400, fontSize: '0.98rem' }}>
+              Find answers to common questions and learn how to use the system
             </Typography>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Search help topics, FAQs, or features..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: themeColors.textSecondary }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{ 
-                maxWidth: '600px', 
-                mx: 'auto',
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
-                  backgroundColor: themeColors.secondary,
-                }
-              }}
-            />
           </Box>
+          <Paper elevation={3} sx={{
+            p: { xs: 2.5, sm: 4 },
+            borderRadius: 3,
+            backgroundColor: themeColors.paper,
+            boxShadow: '0 2px 16px #e0e0e0',
+            minHeight: 400,
+            width: '100%',
+          }}>
+            {/* Search Section */}
+            <Box sx={{ mb: 4, textAlign: 'center' }}>
+              <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: themeColors.textPrimary }}>
+                How can we help you today?
+              </Typography>
+              <Typography variant="body1" color={themeColors.textSecondary} sx={{ mb: 3 }}>
+                Search for help topics, browse guides, or jump directly to different sections
+              </Typography>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Search help topics, FAQs, or features..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ color: themeColors.textSecondary }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ 
+                  maxWidth: '600px', 
+                  mx: 'auto',
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    backgroundColor: themeColors.secondary,
+                  }
+                }}
+              />
+            </Box>
 
-          {/* Quick Navigation */}
-          <Box sx={{ mb: 6 }}>
-            <Typography variant="h5" sx={{ fontWeight: 600, color: themeColors.textPrimary, mb: 3 }}>
-              Quick Navigation
-            </Typography>
-            <Grid container spacing={3}>
-              {quickNavigation.map((item, index) => (
-                <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Card 
-                    sx={{ 
-                      height: '100%',
-                      border: `1px solid ${themeColors.border}`,
-                      borderRadius: 3,
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      '&:hover': { 
-                        transform: 'translateY(-4px)',
-                        boxShadow: '0 8px 25px rgba(0,0,0,0.12)',
-                        borderColor: item.color,
-                        '& .nav-icon': {
-                          transform: 'scale(1.1)',
+            {/* Quick Navigation */}
+            <Box sx={{ mb: 6 }}>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: themeColors.textPrimary, mb: 3 }}>
+                Quick Navigation
+              </Typography>
+              <Grid container spacing={3}>
+                {quickNavigation.map((item, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={index}>
+                    <Card 
+                      sx={{ 
+                        height: '100%',
+                        border: `1px solid ${themeColors.border}`,
+                        borderRadius: 3,
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&:hover': { 
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 8px 25px rgba(0,0,0,0.12)',
+                          borderColor: item.color,
+                          '& .nav-icon': {
+                            transform: 'scale(1.1)',
+                          }
                         }
-                      }
-                    }}
-                    onClick={() => handleNavigation(item.link)}
-                  >
-                    <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'center',
-                        mb: 2
-                      }}>
-                        <Box 
-                          className="nav-icon"
-                          sx={{ 
-                            p: 2, 
-                            borderRadius: 2, 
-                            backgroundColor: `${item.color}15`,
-                            border: `2px solid ${item.color}30`,
-                            transition: 'all 0.3s ease',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          {React.cloneElement(item.icon, { 
-                            sx: { color: item.color, fontSize: '1.8rem' } 
-                          })}
+                      }}
+                      onClick={() => handleNavigation(item.link)}
+                    >
+                      <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'center',
+                          mb: 2
+                        }}>
+                          <Box 
+                            className="nav-icon"
+                            sx={{ 
+                              p: 2, 
+                              borderRadius: 2, 
+                              backgroundColor: `${item.color}15`,
+                              border: `2px solid ${item.color}30`,
+                              transition: 'all 0.3s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            {React.cloneElement(item.icon, { 
+                              sx: { color: item.color, fontSize: '1.8rem' } 
+                            })}
+                          </Box>
                         </Box>
-                      </Box>
-                      <Typography variant="h6" sx={{ 
-                        fontWeight: 600, 
-                        mb: 1.5, 
-                        color: themeColors.textPrimary,
-                        fontSize: '1.1rem'
-                      }}>
-                        {item.title}
-                      </Typography>
-                      <Typography variant="body2" sx={{ 
-                        color: themeColors.textSecondary,
-                        lineHeight: 1.5
-                      }}>
-                        {item.description}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-
-          {/* Help Topics */}
-          <Box sx={{ mb: 6 }}>
-            <Typography variant="h5" sx={{ fontWeight: 600, color: themeColors.textPrimary, mb: 3 }}>
-              Help Topics
-            </Typography>
-            <Grid container spacing={3}>
-              {filteredTopics.length > 0 ? (
-                filteredTopics.map((topic) => (
-                  <Grid item xs={12} md={6} key={topic.key}>
-                    <Card sx={{ 
-                      height: '100%', 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      borderTop: `4px solid ${themeColors.primary}`,
-                      border: `1px solid ${themeColors.border}`,
-                      borderRadius: 2,
-                      transition: 'box-shadow 0.3s ease',
-                      '&:hover': {
-                        boxShadow: '0 6px 20px rgba(0,0,0,0.1)'
-                      }
-                    }}>
-                      <CardHeader
-                        avatar={topic.icon}
-                        title={topic.title}
-                        titleTypographyProps={{ variant: 'h6', fontWeight: 600, color: themeColors.textPrimary }}
-                        sx={{ pb: 1 }}
-                      />
-                      <CardContent sx={{ flexGrow: 1, pt: 0 }}>
-                        <Typography variant="body2" color={themeColors.textSecondary} sx={{ mb: 2 }}>
-                          {topic.description}
+                        <Typography variant="h6" sx={{ 
+                          fontWeight: 600, 
+                          mb: 1.5, 
+                          color: themeColors.textPrimary,
+                          fontSize: '1.1rem'
+                        }}>
+                          {item.title}
                         </Typography>
-                        <List dense disablePadding>
-                          {topic.details.map((detail, idx) => (
-                            <ListItem key={idx} disableGutters sx={{ py: 0.25 }}>
-                              <ListItemIcon sx={{ minWidth: '20px' }}>
-                                <FiberManualRecordIcon sx={{ fontSize: '0.5rem', color: themeColors.primaryDark }} />
-                              </ListItemIcon>
-                              <ListItemText 
-                                primary={detail} 
-                                primaryTypographyProps={{ 
-                                  variant: 'body2', 
-                                  color: themeColors.textPrimary,
-                                  lineHeight: 1.4
-                                }} 
-                              />
-                            </ListItem>
-                          ))}
-                        </List>
+                        <Typography variant="body2" sx={{ 
+                          color: themeColors.textSecondary,
+                          lineHeight: 1.5
+                        }}>
+                          {item.description}
+                        </Typography>
                       </CardContent>
                     </Card>
                   </Grid>
-                ))
-              ) : (
-                <Grid item xs={12}>
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography color={themeColors.textSecondary}>
-                      No help topics matching your search were found.
-                    </Typography>
-                  </Box>
-                </Grid>
-              )}
-            </Grid>
-          </Box>
+                ))}
+              </Grid>
+            </Box>
 
-          {/* FAQ Section */}
-          <Box sx={{ mb: 6 }}>
-            <Typography variant="h5" sx={{ fontWeight: 600, color: themeColors.textPrimary, mb: 3 }}>
-              Frequently Asked Questions
-            </Typography>
-            {filteredFAQ.map((faq, index) => (
-              <Accordion 
-                key={index} 
-                sx={{ 
-                  mb: 1,
-                  border: `1px solid ${themeColors.border}`,
-                  borderRadius: 2,
-                  '&:before': { display: 'none' },
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-                }}
-              >
-                <AccordionSummary 
-                  expandIcon={<ExpandMoreIcon />}
+            {/* Help Topics */}
+            <Box sx={{ mb: 6 }}>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: themeColors.textPrimary, mb: 3 }}>
+                Help Topics
+              </Typography>
+              <Grid container spacing={3}>
+                {filteredTopics.length > 0 ? (
+                  filteredTopics.map((topic) => (
+                    <Grid item xs={12} md={6} key={topic.key}>
+                      <Card sx={{ 
+                        height: '100%', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        borderTop: `4px solid ${themeColors.primary}`,
+                        border: `1px solid ${themeColors.border}`,
+                        borderRadius: 2,
+                        transition: 'box-shadow 0.3s ease',
+                        '&:hover': {
+                          boxShadow: '0 6px 20px rgba(0,0,0,0.1)'
+                        }
+                      }}>
+                        <CardHeader
+                          avatar={topic.icon}
+                          title={topic.title}
+                          titleTypographyProps={{ variant: 'h6', fontWeight: 600, color: themeColors.textPrimary }}
+                          sx={{ pb: 1 }}
+                        />
+                        <CardContent sx={{ flexGrow: 1, pt: 0 }}>
+                          <Typography variant="body2" color={themeColors.textSecondary} sx={{ mb: 2 }}>
+                            {topic.description}
+                          </Typography>
+                          <List dense disablePadding>
+                            {topic.details.map((detail, idx) => (
+                              <ListItem key={idx} disableGutters sx={{ py: 0.25 }}>
+                                <ListItemIcon sx={{ minWidth: '20px' }}>
+                                  <FiberManualRecordIcon sx={{ fontSize: '0.5rem', color: themeColors.primaryDark }} />
+                                </ListItemIcon>
+                                <ListItemText 
+                                  primary={detail} 
+                                  primaryTypographyProps={{ 
+                                    variant: 'body2', 
+                                    color: themeColors.textPrimary,
+                                    lineHeight: 1.4
+                                  }} 
+                                />
+                              </ListItem>
+                            ))}
+                          </List>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))
+                ) : (
+                  <Grid item xs={12}>
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <Typography color={themeColors.textSecondary}>
+                        No help topics matching your search were found.
+                      </Typography>
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+            </Box>
+
+            {/* FAQ Section */}
+            <Box sx={{ mb: 6 }}>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: themeColors.textPrimary, mb: 3 }}>
+                Frequently Asked Questions
+              </Typography>
+              {filteredFAQ.map((faq, index) => (
+                <Accordion 
+                  key={index} 
                   sx={{ 
-                    '& .MuiAccordionSummary-content': { 
-                      alignItems: 'center' 
-                    }
+                    mb: 1,
+                    border: `1px solid ${themeColors.border}`,
+                    borderRadius: 2,
+                    '&:before': { display: 'none' },
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
                   }}
                 >
-                  <QuestionAnswerIcon sx={{ mr: 2, color: themeColors.primary }} />
-                  <Typography variant="subtitle1" sx={{ fontWeight: 500, color: themeColors.textPrimary }}>
-                    {faq.question}
-                  </Typography>
-                </AccordionSummary>
-                <AccordionDetails sx={{ pt: 0 }}>
-                  <Typography variant="body2" color={themeColors.textSecondary} sx={{ ml: 5 }}>
-                    {faq.answer}
-                  </Typography>
-                </AccordionDetails>
-              </Accordion>
-            ))}
-          </Box>
-
-          {/* Contact Support */}
-          <Box sx={{ 
-            textAlign: 'center', 
-            pt: 4, 
-            borderTop: `1px solid ${themeColors.border}`,
-            backgroundColor: themeColors.secondary,
-            borderRadius: 2,
-            p: 4
-          }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: themeColors.primary, mb: 1 }}>
-              Need help?
-            </Typography>
-            <Typography variant="h6" sx={{ 
-              fontWeight: 600, 
-              color: themeColors.primaryDark, 
-              mb: 2
-            }}>
-              We're here for you.
-            </Typography>
-            <Typography variant="body1" color={themeColors.textSecondary} sx={{ mb: 3 }}>
-              Call our support team for assistance and guidance.
-            </Typography>
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              gap: 1.5,
-              backgroundColor: themeColors.hover,
-              borderRadius: 2,
-              p: 3,
-              border: `1px solid ${themeColors.primary}30`,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-            }}>
-              <Typography variant="h6" sx={{ 
-                fontWeight: 700, 
-                color: themeColors.primary,
-                fontSize: '1.3rem'
-              }}>
-                📞 03-5311888
-              </Typography>
-              <Typography variant="body2" sx={{ 
-                color: themeColors.textSecondary,
-                fontWeight: 500
-              }}>
-                Support hours: Sunday–Thursday, 08:00–16:00
-              </Typography>
+                  <AccordionSummary 
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{ 
+                      '& .MuiAccordionSummary-content': { 
+                        alignItems: 'center' 
+                      }
+                    }}
+                  >
+                    <QuestionAnswerIcon sx={{ mr: 2, color: themeColors.primary }} />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 500, color: themeColors.textPrimary }}>
+                      {faq.question}
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ pt: 0 }}>
+                    <Typography variant="body2" color={themeColors.textSecondary} sx={{ ml: 5 }}>
+                      {faq.answer}
+                    </Typography>
+                  </AccordionDetails>
+                </Accordion>
+              ))}
             </Box>
-          </Box>
-        </Paper>
+
+            {/* Contact Support */}
+            <Box sx={{ 
+              textAlign: 'center', 
+              pt: 4, 
+              borderTop: `1px solid ${themeColors.border}`,
+              backgroundColor: themeColors.secondary,
+              borderRadius: 2,
+              p: 4
+            }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: themeColors.primary, mb: 1 }}>
+                Need help?
+              </Typography>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 600, 
+                color: themeColors.primaryDark, 
+                mb: 2
+              }}>
+                We're here for you.
+              </Typography>
+              <Typography variant="body1" color={themeColors.textSecondary} sx={{ mb: 3 }}>
+                Call our support team for assistance and guidance.
+              </Typography>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                gap: 1.5,
+                backgroundColor: themeColors.hover,
+                borderRadius: 2,
+                p: 3,
+                border: `1px solid ${themeColors.primary}30`,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+              }}>
+                <Typography variant="h6" sx={{ 
+                  fontWeight: 700, 
+                  color: themeColors.primary,
+                  fontSize: '1.3rem'
+                }}>
+                  📞 03-5311888
+                </Typography>
+                <Typography variant="body2" sx={{ 
+                  color: themeColors.textSecondary,
+                  fontWeight: 500
+                }}>
+                  Support hours: Sunday–Thursday, 08:00–16:00
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Box>
       </Container>
     </Box>
   );

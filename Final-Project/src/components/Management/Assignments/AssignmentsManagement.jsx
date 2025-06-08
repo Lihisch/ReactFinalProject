@@ -22,10 +22,10 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import GradingIcon from '@mui/icons-material/Grading';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { format, isPast, parseISO, isValid as isValidDate } from 'date-fns';
-import { listAssignments, deleteAssignment } from '../firebase/assignments';
-import { listStudents } from '../firebase/students';
-import { listCourses } from '../firebase/courses';
-import { getAllSubmissions } from '../firebase/submissions';
+import { listAssignments, deleteAssignment } from '../../../firebase/assignments';
+import { listStudents } from '../../../firebase/students';
+import { listCourses } from '../../../firebase/courses';
+import { getAllSubmissions } from '../../../firebase/submissions';
 
 const colors = {
   headerBackground: '#e0e0e0',

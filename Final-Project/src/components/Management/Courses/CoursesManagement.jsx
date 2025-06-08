@@ -1,37 +1,34 @@
 // src/components/CoursesManagement.jsx
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Container, Box, Typography, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, TableSortLabel, TablePagination,
   Paper, IconButton, Tooltip, Stack, Chip, Dialog, DialogActions,
-  DialogContent, DialogContentText, DialogTitle, Snackbar, Alert, FormControlLabel, Switch,
-  Breadcrumbs, Link, CircularProgress, TextField, InputAdornment,
-  Checkbox, Toolbar, alpha, Grid, Skeleton, List, ListItem, ListItemText,
-  Autocomplete, Divider, ListItemSecondaryAction
+  DialogContent, DialogContentText, DialogTitle, Snackbar, Alert,
+  Checkbox, Toolbar, Grid, TextField, InputAdornment
 } from '@mui/material';
-import Popover from '@mui/material/Popover'; // Added for filters
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import HomeIcon from '@mui/icons-material/Home';
-import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import PersonIcon from '@mui/icons-material/Person';
-import ScheduleIcon from '@mui/icons-material/Schedule';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import SchoolIcon from '@mui/icons-material/School';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import PersonRemoveIcon from '@mui/icons-material/PersonRemove';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
-import FilterListIcon from '@mui/icons-material/FilterList'; // Added for filters
-import ClearIcon from '@mui/icons-material/Clear'; // Added for clearing search/filters
-import { listCourses, deleteCourses, addCourse } from '../firebase/courses';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import { listCourses, deleteCourses, addCourse } from '../../../firebase/courses';
 import { isPast, parseISO as dateFnsParseISO, isFuture, isEqual, isToday, isValid as isValidDate } from 'date-fns';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'; // For status icon
-import { listStudents, updateStudent } from '../firebase/students';
+import { listStudents, updateStudent } from '../../../firebase/students';
+import CoursesTableHead from './CoursesTableHead';
+import CoursesTableBody from './CoursesTableBody';
+import CoursesFilterBar from './CoursesFilterBar';
+import CourseDeleteDialog from './CourseDeleteDialog';
+import CourseViewDialog from './CourseViewDialog';
+import CourseEnrollmentDialog from './CourseEnrollmentDialog';
+import { formatDateForDisplay, getCourseStatus, parseDateSafe } from './courseUtils';
 
 const STUDENTS_STORAGE_KEY = 'students';
 // const COURSES_STORAGE_KEY = 'courses'; // Not used in current logic for courses, Firebase is primary
@@ -85,59 +82,6 @@ function stableSort(array, comparator) {
   return stabilizedThis.map((el) => el[0]);
 }
 
-const formatDateForDisplay = (dateString) => {
-  if (!dateString) return 'N/A';
-  try {
-    const date = parseDateSafe(dateString); // Use parseDateSafe for robustness
-    return date ? date.toLocaleDateString('en-CA') : 'Invalid Date'; // YYYY-MM-DD
-  } catch (e) { return 'Invalid Date'; }
-};
-
-const parseDateSafe = (dateInput) => {
-  if (!dateInput) return null;
-  try {
-    let date;
-    if (typeof dateInput === 'string' && (dateInput.includes('T') || dateInput.match(/^\d{4}-\d{2}-\d{2}$/))) {
-      date = dateFnsParseISO(dateInput);
-    } else if (dateInput && typeof dateInput.seconds === 'number' && typeof dateInput.nanoseconds === 'number') {
-      date = new Date(dateInput.seconds * 1000 + dateInput.nanoseconds / 1000000);
-    } else if (dateInput instanceof Date) {
-      date = dateInput;
-    }
-     else {
-      date = new Date(dateInput);
-    }
-    return isNaN(date.getTime()) ? null : date;
-  } catch (e) {
-    console.error("Error parsing date:", dateInput, e);
-    return null;
-  }
-};
-
-const getCourseStatus = (startDateInput, endDateInput) => {
-  const startDate = parseDateSafe(startDateInput);
-  const endDate = parseDateSafe(endDateInput);
-  const today = new Date();
-  today.setHours(0,0,0,0); // Compare dates only
-
-  if (endDate && isPast(endDate) && !isToday(endDate)) {
-    return { text: 'Completed', chipColor: 'default', chipVariant: 'outlined', textColor: 'text.secondary', sortOrder: 3 };
-  }
-  // Check if start date is today or in the past
-  if (startDate && (isPast(startDate) || isToday(startDate))) {
-    // If it started or is starting today, and has no end date or end date is today or in future, it's active
-    if (!endDate || isFuture(endDate) || isToday(endDate)) {
-      return { text: 'Active', chipColor: 'success', chipVariant: 'outlined', textColor: 'success.main', sortOrder: 1 }; // Changed to outlined
-    }
-  }
-  // If start date is in the future, it's a future course
-  if (startDate && isFuture(startDate)) {
-    return { text: 'Future', chipColor: 'info', chipVariant: 'outlined', textColor: 'info.main', sortOrder: 2 }; // Changed to outlined
-  }
-  return { text: 'Unknown', chipColor: 'default', chipVariant: 'outlined', textColor: 'text.disabled', sortOrder: 4 }; // Fallback
-};
-
-
 const formatDateForInput = (dateInput) => {
   const date = parseDateSafe(dateInput);
   if (!date) return '';
@@ -188,7 +132,7 @@ export default function CoursesManagement() {
   const [filterStartDate, setFilterStartDate] = useState(null);
   const [filterEndDate, setFilterEndDate] = useState(null);
   const [filterSemester, setFilterSemester] = useState('');
-  const [filterAnchorEl, setFilterAnchorEl] = useState(null); // For Popover
+  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -563,16 +507,17 @@ export default function CoursesManagement() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
-        <Link component={RouterLink} underline="hover" sx={{ display: 'flex', alignItems: 'center' }} color="inherit" to="/"> <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" /> Home </Link>
-        <Typography color="text.primary">Manage Courses</Typography>
-      </Breadcrumbs>
-
       <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, backgroundColor: colors.white, width: '100%', mb: 2 }}>
         <Toolbar
           sx={{
             p: { xs: 1, sm: 2 }, mb: 2,
-            ...(numSelected > 0 && { bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity) }),
+            background: 'none',
+            boxShadow: 'none',
+            minHeight: 'unset',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            gap: 2
           }}
         >
           <Grid container spacing={2} alignItems="center" justifyContent="space-between">
@@ -580,10 +525,9 @@ export default function CoursesManagement() {
               {numSelected > 0 ? (
                 <Typography color="inherit" variant="subtitle1" component="div"> {numSelected} selected </Typography>
               ) : (
-                <Typography variant="h6" id="tableTitle" component="div"> Courses </Typography>
+                <Typography variant="h6" id="tableTitle" component="div" sx={{ fontWeight: 'bold', mb: 1 }}> Courses </Typography>
               )}
             </Grid>
-
             {numSelected > 0 ? (
               <Grid item xs={12} sm="auto">
                 <Stack direction="row" spacing={1}>
@@ -615,89 +559,48 @@ export default function CoursesManagement() {
                       ) : null,
                     }}
                     fullWidth
+                    sx={{ background: '#fff', borderRadius: 1, boxShadow: '0 1px 4px #0001' }}
                   />
                 </Grid>
                 <Grid item xs="auto">
-                  <Tooltip title="Filters">
-                    <Button
-                      variant="contained" 
-                      startIcon={<FilterListIcon />}
-                      onClick={handleFilterIconClick}
-                      size="medium"
-                      sx={{ 
-                        backgroundColor: colors.green, 
-                        color: colors.text, 
-                        '&:hover': { backgroundColor: colors.greenDark },
-                      }}
-                    >
-                      Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}
-                    </Button>
-                  </Tooltip>
-                  <Popover
-                    open={openFilterPopover}
-                    anchorEl={filterAnchorEl}
-                    onClose={handleFilterPopoverClose}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                  <Button
+                    variant="contained"
+                    startIcon={<FilterListIcon />}
+                    onClick={handleFilterIconClick}
+                    sx={{
+                      backgroundColor: colors.green,
+                      color: colors.text,
+                      boxShadow: '0 2px 6px #0002',
+                      fontWeight: 'bold',
+                      borderRadius: 1,
+                      px: 3,
+                      '&:hover': { backgroundColor: colors.greenDark }
+                    }}
                   >
-                    <Box sx={{ p: 2, width: {xs: 260, sm: 280}, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <Typography variant="subtitle2" gutterBottom sx={{mb: -1}}>Filter Options</Typography>
-                      <FormControlLabel // This is now the first filter
-                        control={
-                          <Switch
-                            checked={showCompletedCourses}
-                            onChange={(e) => { setShowCompletedCourses(e.target.checked); setPage(0); }}
-                            size="small"
-                            sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: colors.green }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: colors.green } }}
-                          />
-                        }
-                        label="Show Completed Courses"
-                      />
-                       <TextField
-                        label="Filter by Semester" type="text" size="small" fullWidth
-                        value={filterSemester}
-                        onChange={(e) => { setFilterSemester(e.target.value); setPage(0); }}
-                        InputLabelProps={{ shrink: true }}
-                        InputProps={{
-                            endAdornment: filterSemester ? (
-                              <InputAdornment position="end">
-                                <IconButton onClick={() => { setFilterSemester(''); setPage(0); }} edge="end" size="small">
-                                  <ClearIcon fontSize="small" />
-                                </IconButton>
-                              </InputAdornment>
-                            ) : null,
-                          }}
-                      />
-                      <Divider/>
-                      <Typography variant="caption" sx={{color: 'text.secondary', mt: -1}}>Filter by Date Range</Typography>
-                      <TextField
-                        label="Course Start Date (From)" type="date" size="small" fullWidth
-                        value={formatDateForInput(filterStartDate)}
-                        onChange={(e) => { const parsed = parseDateSafe(e.target.value); setFilterStartDate(parsed instanceof Date && !isNaN(parsed) ? parsed : null); setPage(0); }}
-                        InputLabelProps={{ shrink: true }}
-                      />
-                      <TextField
-                        label="Course End Date (To)" type="date" size="small" fullWidth
-                        value={formatDateForInput(filterEndDate)}
-                        onChange={(e) => { const parsed = parseDateSafe(e.target.value); setFilterEndDate(parsed instanceof Date && !isNaN(parsed) ? parsed : null); setPage(0); }}
-                        InputLabelProps={{ shrink: true }}
-                      />
-                      <Button
-                        size="small" variant="outlined" fullWidth
-                        onClick={() => { setFilterStartDate(null); setFilterEndDate(null); setPage(0); }}
-                        disabled={!filterStartDate && !filterEndDate}
-                      >
-                        Clear Date Filters
-                      </Button>
-                    </Box>
-                  </Popover>
+                    FILTERS
+                  </Button>
                 </Grid>
                 <Grid item xs="auto" sx={{ ml: { sm: 'auto' } }}>
-                     <Button
-                      variant="contained" startIcon={<AddIcon />} onClick={handleAddCourse}
-                      size="medium"
-                      sx={{ backgroundColor: colors.green, color: colors.text, '&:hover': { backgroundColor: colors.greenDark }, width: { xs: '100%', sm: 'auto' } }}
-                    > Add Course </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={handleAddCourse}
+                    size="medium"
+                    sx={{
+                      backgroundColor: colors.green,
+                      color: colors.text,
+                      boxShadow: '0 2px 6px #0002',
+                      fontWeight: 'bold',
+                      borderRadius: 1,
+                      px: 3,
+                      minWidth: 180,
+                      '&:hover': { backgroundColor: colors.greenDark },
+                      float: 'right',
+                      alignSelf: 'flex-end'
+                    }}
+                  >
+                    ADD COURSE
+                  </Button>
                 </Grid>
               </Grid>
             )}
@@ -707,122 +610,34 @@ export default function CoursesManagement() {
         <TableContainer component={Box}>
           <Table sx={{ minWidth: 900 }} aria-label="courses table" size="small">
             <TableHead sx={{ backgroundColor: 'grey.100' }}>
-              <TableRow>
-                <TableCell padding="checkbox"> <Checkbox color="primary" indeterminate={numSelected > 0 && numSelected < rowCount} checked={rowCount > 0 && numSelected === rowCount} onChange={handleSelectAllClick} inputProps={{ 'aria-label': 'select all courses' }} /> </TableCell>
-                {headCells.map((headCell) => (
-                  <TableCell 
-                    key={headCell.id} 
-                    align={headCell.align || 'left'} 
-                    padding={headCell.padding || 'normal'} 
-                    sortDirection={orderBy === headCell.id ? order : false} 
-                    sx={{ 
-                        fontWeight: 'bold', 
-                        ...(orderBy === headCell.id && { bgcolor: 'action.selected' }),
-                        ...(headCell.width && { width: headCell.width, minWidth: headCell.width }) // Apply width from headCells
-                    }}
-                  >
-                    {headCell.sortable ? (
-                      <TableSortLabel active={orderBy === headCell.id} direction={orderBy === headCell.id ? order : 'asc'} onClick={() => handleSortRequest(headCell.id)}> {headCell.label} </TableSortLabel>
-                    ) : (headCell.label)}
-                  </TableCell>
-                ))}
-              </TableRow>
+              <CoursesTableHead
+                order={order}
+                orderBy={orderBy}
+                onRequestSort={handleSortRequest}
+                rowCount={rowCount}
+                numSelected={numSelected}
+                onSelectAllClick={handleSelectAllClick}
+              />
             </TableHead>
             <TableBody>
-              {loading ? (
-                Array.from(new Array(rowsPerPage)).map((_, index) => (
-                  <TableRow key={`skeleton-${index}`}>
-                    <TableCell padding="checkbox"><Skeleton variant="rectangular" width={18} height={18} /></TableCell>
-                    {headCells.map(cell => (
-                      <TableCell key={cell.id} align={cell.align || 'left'} sx={cell.width ? {width: cell.width, minWidth: cell.width} : {}}><Skeleton variant="text" /></TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : sortedAndPaginatedCourses.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={headCells.length + 2} align="center" sx={{ py: 4 }}> {generateNoCoursesMessage()} </TableCell>
-                </TableRow>
-              ) : (
-                sortedAndPaginatedCourses.map((course) => {
-                  const isItemSelected = isSelected(course?.courseId);
-                  const labelId = `enhanced-table-checkbox-${course?.courseId}`;
-                  const currentEnrollmentCount = enrollmentCounts[course.courseId] ?? 0;
-                  const status = getCourseStatus(course.startingDate, course.endDate);
-                  return (
-                    course && course.courseId ? ( // Ensure course and courseId exist
-                      <TableRow 
-                        hover 
-                        onClick={(event) => { 
-                          if (event.target.type !== 'checkbox' && !event.target.closest('button, a, .MuiChip-root')) { // Prevent row click when interacting with chip or buttons
-                            handleCheckboxClick(event, course.courseId); 
-                          } 
-                        }} 
-                        role="checkbox" 
-                        aria-checked={isItemSelected} 
-                        tabIndex={-1} 
-                        key={course.courseId} 
-                        selected={isItemSelected} 
-                        sx={{ cursor: 'pointer', '&.Mui-selected': { bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity) } }}
-                      >
-                        <TableCell padding="checkbox"> <Checkbox color="primary" checked={isItemSelected} onChange={(event) => handleCheckboxClick(event, course.courseId)} inputProps={{ 'aria-labelledby': labelId }} /> </TableCell>
-                        <TableCell align="center" sx={{width: headCells.find(hc => hc.id === 'statusText')?.width}}>
-                          <Chip
-                            label={status.text}
-                            size="small"
-                            variant={status.chipVariant}
-                            color={status.chipColor} // MUI will handle text/border/background based on this and variant
-                            sx={{
-                              fontWeight: 500,
-                              minWidth: '70px' 
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell component="th" id={labelId} scope="row" sx={{width: headCells.find(hc => hc.id === 'courseId')?.width}}>{course.courseId}</TableCell>
-                        <TableCell sx={{width: headCells.find(hc => hc.id === 'courseName')?.width}}>{course.courseName || 'N/A'}</TableCell>
-                        <TableCell sx={{width: headCells.find(hc => hc.id === 'professorsName')?.width}}>{course.professorsName || 'N/A'}</TableCell>
-                        <TableCell align="left" sx={{width: headCells.find(hc => hc.id === 'semester')?.width}}>{course.semester || 'N/A'}</TableCell>
-                        <TableCell sx={{width: headCells.find(hc => hc.id === 'schedule')?.width}}>{`${course.dayOfWeek || 'N/A'} ${course.startTime || 'N/A'}-${course.endTime || 'N/A'}`}</TableCell>
-                        <TableCell align="center" sx={{width: headCells.find(hc => hc.id === 'enrolled')?.width}}>
-                          <Tooltip title="View/Manage Enrollment">
-                            <Chip
-                              icon={<PeopleAltIcon fontSize="small" />}
-                              label={currentEnrollmentCount}
-                              size="small"
-                              variant="outlined"
-                              onClick={(e) => { e.stopPropagation(); handleOpenEnrollmentModal(course); }}
-                              className="enrollment-chip" 
-                              sx={{ minWidth: '50px', cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
-                            />
-                          </Tooltip>
-                        </TableCell>
-                        <TableCell align="right" sx={{ whiteSpace: 'nowrap', width: headCells.find(hc => hc.id === 'actions')?.width }}>
-                          <Tooltip title="Duplicate Course">
-                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDuplicateCourse(course); }} sx={{ mr: 0.5, color: 'action.active' }}>
-                              <ContentCopyIcon fontSize="inherit" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="View Details">
-                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleViewClick(course); }} sx={{ mr: 0.5, color: 'action.active' }}>
-                              <VisibilityIcon fontSize="inherit" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Edit Course">
-                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleEditCourse(course.courseId); }} sx={{ mr: 0.5, color: 'primary.main' }}>
-                              <EditIcon fontSize="inherit" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Delete Course">
-                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteClick(course.courseId, course.courseName); }} sx={{ color: colors.error }}>
-                              <DeleteIcon fontSize="inherit" />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    ) : null
-                  );
-                })
-              )}
-              {!loading && emptyRows > 0 && (<TableRow style={{ height: 33 * emptyRows }}> <TableCell colSpan={headCells.length + 2} /> </TableRow>)}
+              <CoursesTableBody
+                loading={loading}
+                rowsPerPage={rowsPerPage}
+                sortedAndPaginatedCourses={sortedAndPaginatedCourses}
+                isSelected={isSelected}
+                handleCheckboxClick={handleCheckboxClick}
+                enrollmentCounts={enrollmentCounts}
+                getCourseStatus={getCourseStatus}
+                handleDuplicateCourse={handleDuplicateCourse}
+                handleViewClick={handleViewClick}
+                handleEditCourse={handleEditCourse}
+                handleDeleteClick={handleDeleteClick}
+                handleOpenEnrollmentModal={handleOpenEnrollmentModal}
+                colors={colors}
+                emptyRows={emptyRows}
+                filteredCourses={filteredCourses}
+                generateNoCoursesMessage={generateNoCoursesMessage}
+              />
             </TableBody>
           </Table>
         </TableContainer>
@@ -831,112 +646,37 @@ export default function CoursesManagement() {
       </Paper>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteConfirm.open} onClose={handleDeleteCancel}>
-        <DialogTitle>Confirm Deletion</DialogTitle>
-        <DialogContent> <DialogContentText> Are you sure you want to delete {deleteConfirm.isBulk ? `the selected ${selected.length} course(s)` : `"${deleteConfirm.courseName || 'N/A'}" (ID: ${deleteConfirm.courseId || 'N/A'})`}? {deleteConfirm.warning} This action cannot be undone. </DialogContentText> </DialogContent>
-        <DialogActions sx={{ pb: 2, px: 3 }}> <Button onClick={handleDeleteCancel} color="inherit">Cancel</Button> <Button onClick={handleDeleteConfirm} variant="contained" sx={{ backgroundColor: colors.error, '&:hover': { backgroundColor: 'darkred' } }} autoFocus>Delete</Button> </DialogActions>
-      </Dialog>
+      <CourseDeleteDialog
+        open={deleteConfirm.open}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        courseName={deleteConfirm.courseName}
+        courseId={deleteConfirm.courseId}
+        isBulk={deleteConfirm.isBulk}
+        selectedCount={selected.length}
+        warning={deleteConfirm.warning}
+      />
 
       {/* View Details Dialog */}
-      <Dialog open={viewModalOpen} onClose={handleCloseViewModal} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider' }}>Course Details</DialogTitle>
-        <DialogContent sx={{ pt: '20px !important' }}>
-          {viewCourse ? (
-            <Stack spacing={1.5}>
-              <Typography variant="h6" gutterBottom>{viewCourse.courseName || 'N/A'} ({viewCourse.courseId})</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <InfoOutlinedIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }} />
-                <Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>Status:</Typography>
-                {(() => {
-                  const status = getCourseStatus(viewCourse.startingDate, viewCourse.endDate);
-                  return <Typography variant="body1" sx={{ color: status.textColor, fontWeight: 'medium' }}>{status.text}</Typography>;
-                })()}
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}> <PersonIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }} /><Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>Professor:</Typography> <Typography variant="body1">{viewCourse.professorsName || 'N/A'}</Typography> </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}> <SchoolIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }} /><Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>Semester:</Typography> <Typography variant="body1">{viewCourse.semester || 'N/A'}</Typography> </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}> <ScheduleIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }} /><Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>Schedule:</Typography> <Typography variant="body1">{`${viewCourse.dayOfWeek || 'N/A'} ${viewCourse.startTime || 'N/A'}-${viewCourse.endTime || 'N/A'}`}</Typography> </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}> <CalendarMonthIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }} /><Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>Start Date:</Typography> <Typography variant="body1">{formatDateForDisplay(viewCourse.startingDate)}</Typography> </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}> <CalendarMonthIcon fontSize="inherit" sx={{ mr: 0.5, color: 'action.active' }} /><Typography variant="body2" sx={{ mr: 0.5, fontWeight: 'bold' }}>End Date:</Typography> <Typography variant="body1">{formatDateForDisplay(viewCourse.endDate)}</Typography> </Box>
-              <Box> <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Description:</Typography> <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', pl: 1 }}>{viewCourse.description || 'N/A'}</Typography> </Box>
-            </Stack>
-          ) : (
-            <Typography>No course data available.</Typography>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ pb: 2, px: 3 }}>
-          <Button onClick={handleCloseViewModal}>Close</Button>
-        </DialogActions>
-      </Dialog>
+      <CourseViewDialog
+        open={viewModalOpen}
+        onClose={handleCloseViewModal}
+        course={viewCourse}
+      />
 
       {/* Enrollment Management Dialog */}
-      <Dialog open={enrollmentModalOpen} onClose={handleCloseEnrollmentModal} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          Manage Enrollment{enrollmentCourse ? `: ${enrollmentCourse.courseName}` : ''}
-        </DialogTitle>
-        <DialogContent sx={{ pt: '20px !important' }}>
-          {enrollmentCourse ? (
-            <>
-              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-                Currently Enrolled ({sortedEnrollmentStudents.length})
-              </Typography>
-              {sortedEnrollmentStudents.length > 0 ? (
-                <Paper variant="outlined" sx={{ maxHeight: 200, overflow: 'auto', mb: 2 }}>
-                  <List dense>
-                    {sortedEnrollmentStudents.map(student => (
-                      <ListItem key={student.studentId}
-                        secondaryAction={
-                          <Tooltip title="Unenroll Student">
-                            <IconButton edge="end" aria-label="unenroll" size="small" onClick={() => handleUnenroll(student.studentId)} sx={{ color: colors.error }}>
-                              <PersonRemoveIcon fontSize="inherit" />
-                            </IconButton>
-                          </Tooltip>
-                        }
-                        sx={{ pr: 5 }} // Padding to prevent overlap with action
-                      >
-                        <ListItemText primary={`${student.firstName || ''} ${student.lastName || ''}`} secondary={`ID: ${student.studentId}`} />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Paper>
-              ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>No students currently enrolled.</Typography>
-              )}
-
-              <Divider sx={{ my: 2 }} />
-
-              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>Enroll New Student</Typography>
-              <Autocomplete
-                options={enrollableStudents}
-                getOptionLabel={(option) => `${option.firstName || ''} ${option.lastName || ''} (ID: ${option.studentId})`}
-                value={selectedStudentToEnroll}
-                onChange={(event, newValue) => {
-                  setSelectedStudentToEnroll(newValue);
-                }}
-                isOptionEqualToValue={(option, value) => option.studentId === value.studentId}
-                renderInput={(params) => <TextField {...params} label="Select student to enroll" variant="outlined" size="small" />}
-                size="small"
-                sx={{ mb: 1 }}
-                noOptionsText="All students are enrolled or no students exist"
-              />
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<PersonAddIcon />}
-                onClick={handleEnroll}
-                disabled={!selectedStudentToEnroll || enrollableStudents.length === 0}
-                sx={{ backgroundColor: colors.green, color: colors.text, '&:hover': { backgroundColor: colors.greenDark } }}
-              >
-                Enroll Selected Student
-              </Button>
-            </>
-          ) : (
-            <Typography>No course selected for enrollment management.</Typography>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ pb: 2, px: 3 }}>
-          <Button onClick={handleCloseEnrollmentModal}>Close</Button>
-        </DialogActions>
-      </Dialog>
+      <CourseEnrollmentDialog
+        open={enrollmentModalOpen}
+        onClose={handleCloseEnrollmentModal}
+        enrollmentCourse={enrollmentCourse}
+        sortedEnrollmentStudents={sortedEnrollmentStudents}
+        enrollableStudents={enrollableStudents}
+        selectedStudentToEnroll={selectedStudentToEnroll}
+        setSelectedStudentToEnroll={setSelectedStudentToEnroll}
+        handleUnenroll={handleUnenroll}
+        handleEnroll={handleEnroll}
+        colors={colors}
+      />
 
       {/* Snackbar for notifications */}
       <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
