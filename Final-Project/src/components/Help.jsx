@@ -18,7 +18,7 @@ import LaunchIcon from '@mui/icons-material/Launch';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
-import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
+// import ManageAccountsIcon from '@mui/icons-material/ManageAccounts'; // Removed as per request
 import { Link as MuiLink } from '@mui/material';
 
 const themeColors = {
@@ -38,7 +38,7 @@ const themeColors = {
 
 const quickNavigation = [
   {
-    title: 'My Dashboard',
+    title: 'Home Page',
     description: 'View your overview and recent activity',
     link: '/',
     color: themeColors.info,
@@ -52,7 +52,7 @@ const quickNavigation = [
     icon: <ListAltIcon />
   },
   {
-    title: 'My Assignments', 
+    title: 'My Assignments',
     description: 'View and submit assignments',
     link: '/assignments',
     color: themeColors.primaryDark,
@@ -69,16 +69,16 @@ const quickNavigation = [
     title: 'Student Analytics',
     description: 'Detailed performance analysis',
     link: '/info',
-    color: '#9c27b0',
+    color: '#9c27b0', // A distinct purple
     icon: <BarChartIcon />
-  },
-  {
-    title: 'Management',
-    description: 'Administrative tools and settings',
-    link: '/coursesmanagement',
-    color: '#ff5722',
-    icon: <ManageAccountsIcon />
   }
+  // { // Removed "Management" card
+  //   title: 'Management',
+  //   description: 'Administrative tools and settings',
+  //   link: '/coursesmanagement',
+  //   color: '#ff5722', // A distinct orange
+  //   icon: <ManageAccountsIcon />
+  // }
 ];
 
 const helpTopics = [
@@ -274,8 +274,8 @@ export default function Help() {
                     </InputAdornment>
                   ),
                 }}
-                sx={{ 
-                  maxWidth: '600px', 
+                sx={{
+                  maxWidth: '600px',
                   mx: 'auto',
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 2,
@@ -290,11 +290,11 @@ export default function Help() {
               <Typography variant="h5" sx={{ fontWeight: 600, color: themeColors.textPrimary, mb: 3 }}>
                 Quick Navigation
               </Typography>
-              <Grid container spacing={3}>
+              <Grid container spacing={3} sx={{ justifyContent: 'center' }}> {/* Centered the grid items */}
                 {quickNavigation.map((item, index) => (
                   <Grid item xs={12} sm={6} md={4} key={index}>
-                    <Card 
-                      sx={{ 
+                    <Card
+                      sx={{
                         height: '100%',
                         border: `1px solid ${themeColors.border}`,
                         borderRadius: 3,
@@ -302,7 +302,7 @@ export default function Help() {
                         transition: 'all 0.3s ease',
                         position: 'relative',
                         overflow: 'hidden',
-                        '&:hover': { 
+                        '&:hover': {
                           transform: 'translateY(-4px)',
                           boxShadow: '0 8px 25px rgba(0,0,0,0.12)',
                           borderColor: item.color,
@@ -314,16 +314,16 @@ export default function Help() {
                       onClick={() => handleNavigation(item.link)}
                     >
                       <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                        <Box sx={{ 
-                          display: 'flex', 
+                        <Box sx={{
+                          display: 'flex',
                           justifyContent: 'center',
                           mb: 2
                         }}>
-                          <Box 
+                          <Box
                             className="nav-icon"
-                            sx={{ 
-                              p: 2, 
-                              borderRadius: 2, 
+                            sx={{
+                              p: 2,
+                              borderRadius: 2,
                               backgroundColor: `${item.color}15`,
                               border: `2px solid ${item.color}30`,
                               transition: 'all 0.3s ease',
@@ -332,20 +332,20 @@ export default function Help() {
                               justifyContent: 'center'
                             }}
                           >
-                            {React.cloneElement(item.icon, { 
-                              sx: { color: item.color, fontSize: '1.8rem' } 
+                            {React.cloneElement(item.icon, {
+                              sx: { color: item.color, fontSize: '1.8rem' }
                             })}
                           </Box>
                         </Box>
-                        <Typography variant="h6" sx={{ 
-                          fontWeight: 600, 
-                          mb: 1.5, 
+                        <Typography variant="h6" sx={{
+                          fontWeight: 600,
+                          mb: 1.5,
                           color: themeColors.textPrimary,
                           fontSize: '1.1rem'
                         }}>
                           {item.title}
                         </Typography>
-                        <Typography variant="body2" sx={{ 
+                        <Typography variant="body2" sx={{
                           color: themeColors.textSecondary,
                           lineHeight: 1.5
                         }}>
@@ -367,10 +367,10 @@ export default function Help() {
                 {filteredTopics.length > 0 ? (
                   filteredTopics.map((topic) => (
                     <Grid item xs={12} md={6} key={topic.key}>
-                      <Card sx={{ 
-                        height: '100%', 
-                        display: 'flex', 
-                        flexDirection: 'column', 
+                      <Card sx={{
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
                         borderTop: `4px solid ${themeColors.primary}`,
                         border: `1px solid ${themeColors.border}`,
                         borderRadius: 2,
@@ -395,13 +395,13 @@ export default function Help() {
                                 <ListItemIcon sx={{ minWidth: '20px' }}>
                                   <FiberManualRecordIcon sx={{ fontSize: '0.5rem', color: themeColors.primaryDark }} />
                                 </ListItemIcon>
-                                <ListItemText 
-                                  primary={detail} 
-                                  primaryTypographyProps={{ 
-                                    variant: 'body2', 
+                                <ListItemText
+                                  primary={detail}
+                                  primaryTypographyProps={{
+                                    variant: 'body2',
                                     color: themeColors.textPrimary,
                                     lineHeight: 1.4
-                                  }} 
+                                  }}
                                 />
                               </ListItem>
                             ))}
@@ -428,9 +428,9 @@ export default function Help() {
                 Frequently Asked Questions
               </Typography>
               {filteredFAQ.map((faq, index) => (
-                <Accordion 
-                  key={index} 
-                  sx={{ 
+                <Accordion
+                  key={index}
+                  sx={{
                     mb: 1,
                     border: `1px solid ${themeColors.border}`,
                     borderRadius: 2,
@@ -438,11 +438,11 @@ export default function Help() {
                     boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
                   }}
                 >
-                  <AccordionSummary 
+                  <AccordionSummary
                     expandIcon={<ExpandMoreIcon />}
-                    sx={{ 
-                      '& .MuiAccordionSummary-content': { 
-                        alignItems: 'center' 
+                    sx={{
+                      '& .MuiAccordionSummary-content': {
+                        alignItems: 'center'
                       }
                     }}
                   >
@@ -461,9 +461,9 @@ export default function Help() {
             </Box>
 
             {/* Contact Support */}
-            <Box sx={{ 
-              textAlign: 'center', 
-              pt: 4, 
+            <Box sx={{
+              textAlign: 'center',
+              pt: 4,
               borderTop: `1px solid ${themeColors.border}`,
               backgroundColor: themeColors.secondary,
               borderRadius: 2,
@@ -472,9 +472,9 @@ export default function Help() {
               <Typography variant="h6" sx={{ fontWeight: 600, color: themeColors.primary, mb: 1 }}>
                 Need help?
               </Typography>
-              <Typography variant="h6" sx={{ 
-                fontWeight: 600, 
-                color: themeColors.primaryDark, 
+              <Typography variant="h6" sx={{
+                fontWeight: 600,
+                color: themeColors.primaryDark,
                 mb: 2
               }}>
                 We're here for you.
@@ -482,10 +482,10 @@ export default function Help() {
               <Typography variant="body1" color={themeColors.textSecondary} sx={{ mb: 3 }}>
                 Call our support team for assistance and guidance.
               </Typography>
-              <Box sx={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
+              <Box sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
                 gap: 1.5,
                 backgroundColor: themeColors.hover,
                 borderRadius: 2,
@@ -493,14 +493,14 @@ export default function Help() {
                 border: `1px solid ${themeColors.primary}30`,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
               }}>
-                <Typography variant="h6" sx={{ 
-                  fontWeight: 700, 
+                <Typography variant="h6" sx={{
+                  fontWeight: 700,
                   color: themeColors.primary,
                   fontSize: '1.3rem'
                 }}>
                   📞 03-5311888
                 </Typography>
-                <Typography variant="body2" sx={{ 
+                <Typography variant="body2" sx={{
                   color: themeColors.textSecondary,
                   fontWeight: 500
                 }}>

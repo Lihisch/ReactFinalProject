@@ -392,8 +392,8 @@ const CourseAnalytics = () => {
                   Home
                 </MuiLink>
                 <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
-                  <BarChartIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-                  Grade Analysis
+                  
+                  Course Analytics
                 </Typography>
               </Breadcrumbs>
             </Box>
