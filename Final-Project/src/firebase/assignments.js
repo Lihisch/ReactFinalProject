@@ -28,7 +28,6 @@ export const listAssignments = async () => {
     const querySnapshot = await getDocs(assignmentsCollection);
     
     if (querySnapshot.empty) {
-      console.log('No assignments found in the collection');
       return [];
     }
 
@@ -52,9 +51,6 @@ export const listAssignments = async () => {
       })
       .filter(Boolean); // Remove any null entries from map
 
-    // console.log('Fetched assignments:', assignments); // Keep for debugging if needed
-    console.log(assignments);
-    assignments.forEach(a => console.log('Assignment:', a.assignmentId, a.courseId));
     return assignments;
   } catch (error) {
     console.error("Error listing assignments:", error);

@@ -98,8 +98,6 @@ export default function GradesManagement() {
     setError(null);
     setIsLoading(true);
     try {
-        console.log('Starting to fetch all data...');
-        
         // Fetch data one by one to better handle errors
         let coursesData = [];
         let assignmentsData = [];
@@ -108,7 +106,6 @@ export default function GradesManagement() {
 
         try {
             coursesData = await listCourses();
-            console.log('Fetched courses:', coursesData);
         } catch (err) {
             console.error('Error fetching courses:', err);
             throw new Error('Failed to load courses');
@@ -116,7 +113,6 @@ export default function GradesManagement() {
 
         try {
             assignmentsData = await listAssignments();
-            console.log('Fetched assignments:', assignmentsData);
         } catch (err) {
             console.error('Error fetching assignments:', err);
             throw new Error('Failed to load assignments');
@@ -124,7 +120,6 @@ export default function GradesManagement() {
 
         try {
             studentsData = await listStudents();
-            console.log('Fetched students:', studentsData);
         } catch (err) {
             console.error('Error fetching students:', err);
             throw new Error('Failed to load students');
@@ -132,7 +127,6 @@ export default function GradesManagement() {
 
         try {
             submissionsData = await getAllSubmissions();
-            console.log('Fetched submissions:', submissionsData);
         } catch (err) {
             console.error('Error fetching submissions:', err);
             throw new Error('Failed to load submissions');
@@ -142,7 +136,7 @@ export default function GradesManagement() {
         const validCourses = coursesData.filter(c => {
             const isValid = c && c.courseId;
             if (!isValid) {
-                console.log('Invalid course:', c);
+                console.warn('Invalid course:', c);
             }
             return isValid;
         });
@@ -150,7 +144,7 @@ export default function GradesManagement() {
         const validAssignments = assignmentsData.filter(a => {
             const isValid = a && (a.assignmentId || a.id) && a.courseId;
             if (!isValid) {
-                console.log('Invalid assignment:', a);
+                console.warn('Invalid assignment:', a);
             }
             return isValid;
         }).map(a => ({
@@ -163,7 +157,7 @@ export default function GradesManagement() {
         const validStudents = studentsData.filter(s => {
             const isValid = s && s.studentId;
             if (!isValid) {
-                console.log('Invalid student:', s);
+                console.warn('Invalid student:', s);
             }
             return isValid;
         });
@@ -171,16 +165,9 @@ export default function GradesManagement() {
         const validSubmissions = submissionsData.filter(s => {
             const isValid = s && s.studentId && s.assignmentId && s.courseId;
             if (!isValid) {
-                console.log('Invalid submission:', s);
+                console.warn('Invalid submission:', s);
             }
             return isValid;
-        });
-
-        console.log('Validated data:', {
-            courses: validCourses,
-            assignments: validAssignments,
-            students: validStudents,
-            submissions: validSubmissions
         });
 
         if (validCourses.length === 0) {
@@ -222,20 +209,14 @@ export default function GradesManagement() {
     }
 
     try {
-        console.log('Processing grades for course:', selectedCourse);
-        console.log('All assignments:', assignments);
-        console.log('All students:', students);
-        console.log('All submissions:', submissions);
-        
         // Get course assignments - simplified filtering
         const courseAssignments = assignments.filter(a => {
             const isValid = a && a.courseId && String(a.courseId) === String(selectedCourse);
             if (!isValid) {
-                console.log('Invalid assignment:', a);
+                console.warn('Invalid assignment:', a);
             }
             return isValid;
         });
-        console.log('Course assignments:', courseAssignments);
 
         // Get enrolled students - simplified filtering
         const enrolledStudents = students.filter(s => {
@@ -243,14 +224,12 @@ export default function GradesManagement() {
                 Array.isArray(s.enrolledCourses) && 
                 s.enrolledCourses.some(cId => String(cId) === String(selectedCourse));
             if (!isValid) {
-                console.log('Invalid student:', s);
+                console.warn('Invalid student:', s);
             }
             return isValid;
         });
-        console.log('Enrolled students:', enrolledStudents);
 
         if (enrolledStudents.length === 0 || courseAssignments.length === 0) {
-            console.log('No students or assignments found for course');
             setStats({ average: 0, submissionRate: 0, median: 0, failingPercentage: 0 });
             return [];
         }
@@ -319,8 +298,6 @@ export default function GradesManagement() {
             }
         }
 
-        console.log('Combined data:', combinedData);
-
         // Calculate statistics
         const grades = combinedData.filter(item => item.grade !== null).map(item => item.grade);
         const totalGrades = grades.length;
@@ -337,7 +314,6 @@ export default function GradesManagement() {
                 ((grades.filter(g => g < FAILING_THRESHOLD).length / totalGrades) * 100).toFixed(0) : 0
         };
 
-        console.log('Calculated stats:', stats);
         setStats(stats);
         return combinedData;
 

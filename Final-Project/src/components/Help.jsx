@@ -239,7 +239,6 @@ export default function Help() {
           </Breadcrumbs>
           <Box sx={{ width: '100%', maxWidth: 1300, mb: 1.5 }}>
             <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: themeColors.primaryDark, mb: 0.2, letterSpacing: '.02em', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <HelpOutlineIcon fontSize="medium" sx={{ color: themeColors.primaryDark, mb: '-4px' }} />
               Help Center
             </Typography>
             <Typography variant="subtitle1" sx={{ color: themeColors.textSecondary, fontWeight: 400, fontSize: '0.98rem' }}>
